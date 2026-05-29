@@ -1,3 +1,4 @@
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { Controller, type Control, type UseFormRegister } from "react-hook-form";
 
 import {
@@ -22,6 +23,64 @@ const inputClass =
   "mt-1 block w-full min-w-0 max-w-full box-border rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm [overflow-wrap:anywhere] form-control-focus";
 
 const dateInputClass = `${inputClass} form-date-input`;
+
+const textareaClass = `${inputClass} max-h-48 resize-none overflow-y-auto`;
+
+const syncTextareaHeight = (el: HTMLTextAreaElement | null) => {
+  if (!el) {
+    return;
+  }
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+};
+
+interface AutoGrowTextareaProps {
+  name: FormFieldKey;
+  label: string;
+  register: UseFormRegister<FormValues>;
+  error?: string;
+}
+
+const AutoGrowTextarea = ({
+  name,
+  label,
+  register,
+  error,
+}: AutoGrowTextareaProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const { ref: registerRef, onChange, ...registerRest } = register(name);
+
+  const resize = useCallback((el: HTMLTextAreaElement | null) => {
+    syncTextareaHeight(el);
+  }, []);
+
+  useLayoutEffect(() => {
+    resize(textareaRef.current);
+  }, [resize]);
+
+  return (
+    <label className="flex min-w-0 flex-col text-sm font-medium text-slate-800 md:col-span-2">
+      {label}
+      <textarea
+        {...registerRest}
+        rows={3}
+        className={textareaClass}
+        ref={(el) => {
+          registerRef(el);
+          textareaRef.current = el;
+          resize(el);
+        }}
+        onChange={(event) => {
+          onChange(event);
+          resize(event.currentTarget);
+        }}
+      />
+      {error ? (
+        <span className="mt-1 text-xs text-red-600">{error}</span>
+      ) : null}
+    </label>
+  );
+};
 
 const SELECT_FALLBACK: SelectOption[] = [{ value: "", label: "" }];
 
@@ -95,13 +154,12 @@ export const FormFieldRow = ({
 
   if (kind === "textarea") {
     return (
-      <label className="flex min-w-0 flex-col text-sm font-medium text-slate-800 md:col-span-2">
-        {label}
-        <textarea rows={3} className={inputClass} {...register(name)} />
-        {error ? (
-          <span className="mt-1 text-xs text-red-600">{error}</span>
-        ) : null}
-      </label>
+      <AutoGrowTextarea
+        name={name}
+        label={label}
+        register={register}
+        error={error}
+      />
     );
   }
 

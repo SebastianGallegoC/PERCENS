@@ -15,6 +15,12 @@ describe("formFieldMeta — Survey", () => {
     expect(inputKindForField("tiempo_desplazamiento_minutos")).toBe("number");
   });
 
+  it("configura textareas extensibles", () => {
+    expect(inputKindForField("observaciones")).toBe("textarea");
+    expect(inputKindForField("comentarios_desplazamiento")).toBe("textarea");
+    expect(inputKindForField("cuenta_con_cocina_otro")).toBe("textarea");
+  });
+
   it("mantiene etiquetas específicas de columnas duplicadas", () => {
     expect(fieldLabel("nombres_apellidos_encuestado")).toBe("Nombres y apellidos");
     expect(fieldLabel("tipo_documento_encuestador")).toBe("Identificación");

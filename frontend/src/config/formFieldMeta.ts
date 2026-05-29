@@ -4,6 +4,12 @@ import { fieldSelectOptions } from '@/config/formSelectOptions';
 const TRI_FIELDS = new Set<FormFieldKey>([
 ]);
 
+const TEXTAREA_FIELDS = new Set<FormFieldKey>([
+  'observaciones',
+  'comentarios_desplazamiento',
+  'cuenta_con_cocina_otro',
+]);
+
 const NUMBER_FIELDS = new Set<FormFieldKey>([
   'edad_encuestado',
   'tiempo_desplazamiento_horas',
@@ -14,7 +20,7 @@ const NUMBER_FIELDS = new Set<FormFieldKey>([
 export type InputKind = 'date' | 'number' | 'select' | 'select-tri' | 'textarea' | 'text';
 
 export const inputKindForField = (field: FormFieldKey): InputKind => {
-  if (field === 'observaciones') {
+  if (TEXTAREA_FIELDS.has(field)) {
     return 'textarea';
   }
   if (field === 'fecha_visita') {
