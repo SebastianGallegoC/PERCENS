@@ -20,6 +20,11 @@ const FormulariosDiligenciadosPage = lazy(() =>
     default: mod.FormulariosDiligenciadosPage,
   })),
 );
+const PerfilEncuestadorPage = lazy(() =>
+  import("@/pages/PerfilEncuestadorPage").then((mod) => ({
+    default: mod.PerfilEncuestadorPage,
+  })),
+);
 function App() {
   return (
     <>
@@ -47,6 +52,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <FormulariosDiligenciadosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/perfil-encuestador"
+            element={
+              <ProtectedRoute>
+                <PerfilEncuestadorPage />
               </ProtectedRoute>
             }
           />

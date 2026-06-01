@@ -23,17 +23,19 @@ async function renderInicio() {
 }
 
 describe("InicioPage", () => {
-  it("renderiza enlaces a formulario, diligenciados y plantilla", async () => {
+  it("renderiza enlaces a formulario, diligenciados, perfil y plantilla", async () => {
     await renderInicio();
 
     const formulario = screen.getByRole("link", { name: /Completar encuesta/i });
     const diligenciados = screen.getByRole("link", {
       name: /Ver encuestas diligenciadas/i,
     });
+    const perfil = screen.getByRole("link", { name: /Perfil encuestador/i });
     const plantilla = screen.getByRole("link", { name: /Descargar plantilla vacía/i });
 
     expect(formulario).toHaveAttribute("href", "/formulario");
     expect(diligenciados).toHaveAttribute("href", "/formularios-diligenciados");
+    expect(perfil).toHaveAttribute("href", "/perfil-encuestador");
     expect(plantilla).toHaveAttribute("href", "/PLANTILLA.xlsx");
   });
 
