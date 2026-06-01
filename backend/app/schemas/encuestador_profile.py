@@ -31,6 +31,7 @@ class EncuestadorProfileRead(EncuestadorProfileBase):
     id: int
     username_owner: str
     habilitado: bool
+    formularios_asociados: int = 0
     created_at: str
     updated_at: str
 

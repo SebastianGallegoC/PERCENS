@@ -32,8 +32,23 @@ vi.mock("@/services/api", () => ({
   listEnabledEncuestadorProfilesApi: vi.fn(),
 }));
 
+const localFormsStore = {
+  formularios: [] as Array<{ id_perfil_encuestador?: number | null }>,
+  historialFormularios: [] as Array<{ id_perfil_encuestador?: number | null }>,
+  precargas: [] as Array<{ id_perfil_encuestador?: number | null }>,
+};
+
 vi.mock("@/services/db", () => ({
   db: {
+    formularios: {
+      toArray: async () => localFormsStore.formularios,
+    },
+    historialFormularios: {
+      toArray: async () => localFormsStore.historialFormularios,
+    },
+    precargas: {
+      toArray: async () => localFormsStore.precargas,
+    },
     transaction: async (_mode: string, _table: unknown, fn: () => Promise<void>) => {
       await fn();
     },
@@ -51,6 +66,8 @@ vi.mock("@/services/db", () => ({
 
 import { listEnabledEncuestadorProfilesApi } from "@/services/api";
 import {
+  encuestadorProfileCanBeDeleted,
+  encuestadorProfileHasServerForms,
   formatPerfilEncuestadorDisplay,
   listEnabledEncuestadorProfilesLocal,
   resolveEncuestadorProfileNombre,
@@ -72,9 +89,44 @@ describe("formatPerfilEncuestadorDisplay", () => {
   });
 });
 
+describe("encuestadorProfileCanBeDeleted", () => {
+  beforeEach(() => {
+    localFormsStore.formularios = [];
+    localFormsStore.historialFormularios = [];
+    localFormsStore.precargas = [];
+  });
+
+  it("rechaza si el servidor reporta formularios asociados", async () => {
+    expect(
+      await encuestadorProfileCanBeDeleted({ id: 1, formularios_asociados: 2 }),
+    ).toBe(false);
+  });
+
+  it("rechaza si hay formularios locales con el mismo perfil", async () => {
+    localFormsStore.historialFormularios = [{ id_perfil_encuestador: 5 }];
+    expect(await encuestadorProfileCanBeDeleted({ id: 5, formularios_asociados: 0 })).toBe(
+      false,
+    );
+  });
+
+  it("permite eliminar sin vínculos", async () => {
+    expect(await encuestadorProfileCanBeDeleted({ id: 3, formularios_asociados: 0 })).toBe(true);
+  });
+});
+
+describe("encuestadorProfileHasServerForms", () => {
+  it("detecta conteo positivo", () => {
+    expect(encuestadorProfileHasServerForms({ formularios_asociados: 1 })).toBe(true);
+    expect(encuestadorProfileHasServerForms({ formularios_asociados: 0 })).toBe(false);
+  });
+});
+
 describe("encuestadorProfiles", () => {
   beforeEach(() => {
     cacheStore.length = 0;
+    localFormsStore.formularios = [];
+    localFormsStore.historialFormularios = [];
+    localFormsStore.precargas = [];
     vi.clearAllMocks();
   });
 

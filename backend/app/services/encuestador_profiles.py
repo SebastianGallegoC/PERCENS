@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.encuestador_profile import EncuestadorProfile
 from app.repository.encuestador_profiles import (
+    count_forms_grouped_by_profile_ids,
     count_forms_using_profile,
     create_profile,
     delete_profile,
@@ -26,7 +27,7 @@ def _iso(value: datetime | None) -> str:
     return value.isoformat()
 
 
-def to_read_model(profile: EncuestadorProfile) -> EncuestadorProfileRead:
+def to_read_model(profile: EncuestadorProfile, *, formularios_asociados: int = 0) -> EncuestadorProfileRead:
     return EncuestadorProfileRead(
         id=profile.id,
         username_owner=profile.username_owner,
@@ -38,6 +39,7 @@ def to_read_model(profile: EncuestadorProfile) -> EncuestadorProfileRead:
         empresa_entidad_encuestador=profile.empresa_entidad_encuestador,
         firma_encuestador=profile.firma_encuestador,
         habilitado=bool(profile.habilitado),
+        formularios_asociados=max(0, int(formularios_asociados)),
         created_at=_iso(profile.created_at),
         updated_at=_iso(profile.updated_at),
     )
@@ -49,7 +51,12 @@ def to_lite_model(profile: EncuestadorProfile) -> EncuestadorProfileLite:
 
 async def list_profile_reads(session: AsyncSession, username: str) -> list[EncuestadorProfileRead]:
     profiles = await list_profiles_for_user(session, username)
-    return [to_read_model(item) for item in profiles]
+    profile_ids = [int(item.id) for item in profiles]
+    form_counts = await count_forms_grouped_by_profile_ids(session, profile_ids)
+    return [
+        to_read_model(item, formularios_asociados=form_counts.get(int(item.id), 0))
+        for item in profiles
+    ]
 
 
 async def list_enabled_profile_lites(session: AsyncSession, username: str) -> list[EncuestadorProfileLite]:

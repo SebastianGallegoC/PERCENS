@@ -64,6 +64,39 @@ export async function resolveEncuestadorProfileNombre(
   return local.find((p) => p.id === profileId)?.nombre ?? null;
 }
 
+/** Formularios locales (cola, historial o precarga) que referencian el perfil. */
+export async function encuestadorProfileHasLocalForms(profileId: number): Promise<boolean> {
+  const [queued, historial, precargas] = await Promise.all([
+    db.formularios.toArray(),
+    db.historialFormularios.toArray(),
+    db.precargas.toArray(),
+  ]);
+  const matchesProfile = (value: number | null | undefined) => value === profileId;
+  return (
+    queued.some((row) => matchesProfile(row.id_perfil_encuestador)) ||
+    historial.some((row) => matchesProfile(row.id_perfil_encuestador)) ||
+    precargas.some((row) => matchesProfile(row.id_perfil_encuestador))
+  );
+}
+
+export function encuestadorProfileHasServerForms(profile: {
+  formularios_asociados?: number | null;
+}): boolean {
+  const count = profile.formularios_asociados ?? 0;
+  return Number.isFinite(count) && count > 0;
+}
+
+export async function encuestadorProfileCanBeDeleted(profile: {
+  id: number;
+  formularios_asociados?: number | null;
+}): Promise<boolean> {
+  if (encuestadorProfileHasServerForms(profile)) {
+    return false;
+  }
+  const local = await encuestadorProfileHasLocalForms(profile.id);
+  return !local;
+}
+
 export async function enrichFormularioSnapshotEncuestador<
   T extends { id_perfil_encuestador?: number | null; encuestador_perfil_nombre?: string | null },
 >(snapshot: T, username: string | null): Promise<T> {

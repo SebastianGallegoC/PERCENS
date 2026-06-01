@@ -44,6 +44,24 @@ async def count_forms_using_profile(session: AsyncSession, profile_id: int) -> i
     return int(result.scalar_one() or 0)
 
 
+async def count_forms_grouped_by_profile_ids(
+    session: AsyncSession,
+    profile_ids: list[int],
+) -> dict[int, int]:
+    if not profile_ids:
+        return {}
+    result = await session.execute(
+        select(FormRecord.id_perfil_encuestador, func.count())
+        .where(FormRecord.id_perfil_encuestador.in_(profile_ids))
+        .group_by(FormRecord.id_perfil_encuestador)
+    )
+    counts: dict[int, int] = {}
+    for profile_id, total in result.all():
+        if profile_id is not None:
+            counts[int(profile_id)] = int(total or 0)
+    return counts
+
+
 async def create_profile(
     session: AsyncSession,
     profile: EncuestadorProfile,

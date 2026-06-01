@@ -25,7 +25,10 @@ import {
   encuestadorProfileDeleteErrorMessage,
   isEncuestadorProfileInUseError,
 } from "@/lib/encuestadorProfileDeleteMessages";
-import { syncEnabledEncuestadorProfiles } from "@/services/encuestadorProfiles";
+import {
+  encuestadorProfileCanBeDeleted,
+  syncEnabledEncuestadorProfiles,
+} from "@/services/encuestadorProfiles";
 import { useAuthStore } from "@/store/useAuthStore";
 
 const emptyProfileForm = (): EncuestadorProfileFormState => ({
@@ -141,6 +144,16 @@ export const InicioPage = () => {
     },
     [refreshProfiles],
   );
+
+  const requestDeleteProfile = useCallback(async (profile: EncuestadorProfileRead) => {
+    setProfilesError(null);
+    const canDelete = await encuestadorProfileCanBeDeleted(profile);
+    if (!canDelete) {
+      setProfileDeleteBlockedOpen(true);
+      return;
+    }
+    setProfilePendingDelete(profile);
+  }, []);
 
   const confirmDeleteProfile = useCallback(async () => {
     if (!profilePendingDelete) {
@@ -450,7 +463,7 @@ export const InicioPage = () => {
                           type="button"
                           variant="outline"
                           className="border-rose-300 text-rose-700 hover:bg-rose-50"
-                          onClick={() => setProfilePendingDelete(profile)}
+                          onClick={() => void requestDeleteProfile(profile)}
                         >
                           Eliminar
                         </Button>
@@ -461,40 +474,42 @@ export const InicioPage = () => {
               </div>
             </div>
           </div>
+
+          <SimpleDialogModal
+            open={profilePendingDelete != null}
+            overlayZIndexClass="z-20"
+            title="¿Eliminar perfil de encuestador?"
+            description={
+              profilePendingDelete ? (
+                <>
+                  Se eliminará el perfil{" "}
+                  <strong>{profilePendingDelete.nombres_apellidos_encuestador}</strong> (ID{" "}
+                  {profilePendingDelete.id}). Esta acción no se puede deshacer.
+                </>
+              ) : null
+            }
+            cancelLabel="Cancelar"
+            confirmLabel="Eliminar perfil"
+            tone="danger"
+            confirming={profileDeleteConfirming}
+            onCancel={() => {
+              if (!profileDeleteConfirming) {
+                setProfilePendingDelete(null);
+              }
+            }}
+            onConfirm={() => void confirmDeleteProfile()}
+          />
+
+          <SimpleDialogModal
+            open={profileDeleteBlockedOpen}
+            overlayZIndexClass="z-20"
+            title="No se puede eliminar el perfil"
+            description={encuestadorProfileDeleteBlockedMessage()}
+            confirmLabel="Entendido"
+            onCancel={() => setProfileDeleteBlockedOpen(false)}
+          />
         </div>
       ) : null}
-
-      <SimpleDialogModal
-        open={profilePendingDelete != null}
-        title="¿Eliminar perfil de encuestador?"
-        description={
-          profilePendingDelete ? (
-            <>
-              Se eliminará el perfil{" "}
-              <strong>{profilePendingDelete.nombres_apellidos_encuestador}</strong> (ID{" "}
-              {profilePendingDelete.id}). Esta acción no se puede deshacer.
-            </>
-          ) : null
-        }
-        cancelLabel="Cancelar"
-        confirmLabel="Eliminar perfil"
-        tone="danger"
-        confirming={profileDeleteConfirming}
-        onCancel={() => {
-          if (!profileDeleteConfirming) {
-            setProfilePendingDelete(null);
-          }
-        }}
-        onConfirm={() => void confirmDeleteProfile()}
-      />
-
-      <SimpleDialogModal
-        open={profileDeleteBlockedOpen}
-        title="No se puede eliminar el perfil"
-        description={encuestadorProfileDeleteBlockedMessage()}
-        confirmLabel="Entendido"
-        onCancel={() => setProfileDeleteBlockedOpen(false)}
-      />
     </div>
   );
 };

@@ -12,6 +12,8 @@ type SimpleDialogModalProps = {
   onConfirm?: () => void;
   confirming?: boolean;
   tone?: "default" | "danger" | "warning";
+  /** z-index del overlay; usar valor > 220 si se abre sobre el modal de perfiles. */
+  overlayZIndexClass?: string;
 };
 
 export function SimpleDialogModal({
@@ -24,6 +26,7 @@ export function SimpleDialogModal({
   onConfirm,
   confirming = false,
   tone = "default",
+  overlayZIndexClass = "z-[60]",
 }: SimpleDialogModalProps) {
   const isAlert = onConfirm == null;
 
@@ -64,7 +67,7 @@ export function SimpleDialogModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className={`fixed inset-0 flex items-center justify-center p-4 ${overlayZIndexClass}`}
       role="presentation"
     >
       <button

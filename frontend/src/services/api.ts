@@ -160,6 +160,7 @@ export interface FormReadItem {
 export interface EncuestadorProfileRead {
   id: number;
   username_owner: string;
+  formularios_asociados?: number;
   nombres_apellidos_encuestador: string;
   tipo_documento_encuestador: string;
   numero_documento_encuestador: string;
