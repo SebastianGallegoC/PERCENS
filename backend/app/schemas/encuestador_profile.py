@@ -8,7 +8,11 @@ class EncuestadorProfileBase(BaseModel):
     telefono_encuestador: str = Field(min_length=1, max_length=255)
     cargo_encuestador: str = Field(min_length=1, max_length=255)
     empresa_entidad_encuestador: str = Field(min_length=1, max_length=255)
-    firma_encuestador: str = Field(min_length=1, max_length=4000)
+    firma_encuestador: str = Field(
+        min_length=1,
+        max_length=600_000,
+        description="Imagen de firma (data URL JPEG) comprimida desde el cliente.",
+    )
 
 
 class EncuestadorProfileCreate(EncuestadorProfileBase):

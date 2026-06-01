@@ -15,8 +15,23 @@ import {
   updateEncuestadorProfileApi,
   type EncuestadorProfileRead,
 } from "@/services/api";
+import {
+  EncuestadorProfileFormFields,
+  type EncuestadorProfileFormState,
+} from "@/components/encuestador/EncuestadorProfileFormFields";
 import { syncEnabledEncuestadorProfiles } from "@/services/encuestadorProfiles";
 import { useAuthStore } from "@/store/useAuthStore";
+
+const emptyProfileForm = (): EncuestadorProfileFormState => ({
+  nombres_apellidos_encuestador: "",
+  tipo_documento_encuestador: "",
+  numero_documento_encuestador: "",
+  telefono_encuestador: "",
+  cargo_encuestador: "",
+  empresa_entidad_encuestador: "",
+  firma_encuestador: "",
+  habilitado: true,
+});
 
 export const InicioPage = () => {
   const authUsername = useAuthStore((s) => s.username);
@@ -27,16 +42,7 @@ export const InicioPage = () => {
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [profilesError, setProfilesError] = useState<string | null>(null);
   const [editingProfileId, setEditingProfileId] = useState<number | null>(null);
-  const [formValues, setFormValues] = useState({
-    nombres_apellidos_encuestador: "",
-    tipo_documento_encuestador: "",
-    numero_documento_encuestador: "",
-    telefono_encuestador: "",
-    cargo_encuestador: "",
-    empresa_entidad_encuestador: "",
-    firma_encuestador: "",
-    habilitado: true,
-  });
+  const [formValues, setFormValues] = useState<EncuestadorProfileFormState>(emptyProfileForm);
 
   const refreshCounts = useCallback(async () => {
     const [pendingCount, errorCount] = await Promise.all([
@@ -53,16 +59,7 @@ export const InicioPage = () => {
 
   const resetProfileForm = useCallback(() => {
     setEditingProfileId(null);
-    setFormValues({
-      nombres_apellidos_encuestador: "",
-      tipo_documento_encuestador: "",
-      numero_documento_encuestador: "",
-      telefono_encuestador: "",
-      cargo_encuestador: "",
-      empresa_entidad_encuestador: "",
-      firma_encuestador: "",
-      habilitado: true,
-    });
+    setFormValues(emptyProfileForm());
   }, []);
 
   const refreshProfiles = useCallback(async () => {
@@ -96,7 +93,15 @@ export const InicioPage = () => {
   const submitProfile = useCallback(async () => {
     setProfilesError(null);
     if (!formValues.nombres_apellidos_encuestador.trim()) {
-      setProfilesError("Completá al menos el nombre del encuestador.");
+      setProfilesError("Completá el nombre del encuestador.");
+      return;
+    }
+    if (!formValues.tipo_documento_encuestador.trim()) {
+      setProfilesError("Seleccioná el tipo de identificación.");
+      return;
+    }
+    if (!formValues.firma_encuestador.trim()) {
+      setProfilesError("Subí una imagen con la firma del encuestador.");
       return;
     }
     try {
@@ -348,39 +353,10 @@ export const InicioPage = () => {
                 <p className="text-sm font-semibold text-slate-800">
                   {editingProfileId == null ? "Crear perfil" : `Editando perfil #${editingProfileId}`}
                 </p>
-                {(
-                  [
-                    ["nombres_apellidos_encuestador", "Nombres y apellidos"],
-                    ["tipo_documento_encuestador", "Identificación"],
-                    ["numero_documento_encuestador", "N° documento"],
-                    ["telefono_encuestador", "Teléfono"],
-                    ["cargo_encuestador", "Cargo"],
-                    ["empresa_entidad_encuestador", "Empresa y/o entidad"],
-                    ["firma_encuestador", "Firma"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <label key={key} className="block text-sm text-slate-700">
-                    {label}
-                    <input
-                      className="mt-1 block w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                      value={formValues[key]}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setFormValues((prev) => ({ ...prev, [key]: value }));
-                      }}
-                    />
-                  </label>
-                ))}
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={formValues.habilitado}
-                    onChange={(e) =>
-                      setFormValues((prev) => ({ ...prev, habilitado: e.target.checked }))
-                    }
-                  />
-                  Perfil habilitado
-                </label>
+                <EncuestadorProfileFormFields
+                  values={formValues}
+                  onChange={setFormValues}
+                />
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" onClick={() => void submitProfile()}>
                     {editingProfileId == null ? "Guardar perfil" : "Actualizar perfil"}
@@ -412,8 +388,18 @@ export const InicioPage = () => {
                         {profile.nombres_apellidos_encuestador} (ID {profile.id})
                       </p>
                       <p className="text-xs text-slate-600">
+                        {profile.tipo_documento_encuestador} · {profile.numero_documento_encuestador}
+                      </p>
+                      <p className="text-xs text-slate-600">
                         Estado: {profile.habilitado ? "Habilitado" : "Deshabilitado"}
                       </p>
+                      {/^data:image\//i.test(profile.firma_encuestador) ? (
+                        <img
+                          src={profile.firma_encuestador}
+                          alt={`Firma de ${profile.nombres_apellidos_encuestador}`}
+                          className="mt-2 max-h-16 w-auto rounded border border-slate-200 bg-white object-contain"
+                        />
+                      ) : null}
                       <div className="mt-2 flex flex-wrap gap-2">
                         <Button
                           type="button"

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { isSearchableSelectField } from "@/config/formSelectOptions";
+import { isSearchableSelectField, TIPO_DOCUMENTO_OPTIONS } from "@/config/formSelectOptions";
+
+describe("formSelectOptions — tipo documento", () => {
+  it("expone opciones de tipo de documento para perfiles y formulario", () => {
+    expect(TIPO_DOCUMENTO_OPTIONS).toContain("CÉDULA DE CIUDADANÍA");
+    expect(TIPO_DOCUMENTO_OPTIONS).toHaveLength(4);
+  });
+});
 
 describe("formSelectOptions — búsqueda en select", () => {
   it("solo municipio usa búsqueda por texto", () => {
