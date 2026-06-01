@@ -107,7 +107,13 @@ Para ejecutar backend fuera de Docker, usar `backend/.env.example` como base y a
    docker compose build
    docker compose up -d
    ```
-4. Configurar Traefik compartido para cargar también `traefik/dynamic.survey.yml`.
+4. Tras `git pull` que cambie código o migraciones Alembic, **reconstruir el backend** (las migraciones van copiadas en la imagen, no se leen del host):
+   ```bash
+   docker compose build backend
+   docker compose up -d backend
+   docker compose exec backend python -m alembic upgrade head
+   ```
+5. Configurar Traefik compartido para cargar también `traefik/dynamic.survey.yml`.
 
 Una forma recomendada es que Traefik use un directorio de reglas dinámicas:
 

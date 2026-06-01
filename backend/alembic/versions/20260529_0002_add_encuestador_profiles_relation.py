@@ -1,7 +1,7 @@
 """add encuestador profiles relation
 
 Revision ID: 20260529_0002
-Revises: 20260505_0001
+Revises: 20260520_0001
 Create Date: 2026-05-29 16:58:00
 """
 
