@@ -98,9 +98,9 @@ Para ejecutar backend fuera de Docker, usar `backend/.env.example` como base y a
 1. Crear registros DNS A:
    - `survey.nosignal.site` → IP pública del VPS
    - `api.survey.nosignal.site` → IP pública del VPS
-2. Crear o verificar la red Docker:
+2. Crear o verificar la red Docker (la misma que usa Traefik/Huertas):
    ```bash
-   docker network create traefik-public
+   docker network create nosignal-network
    ```
 3. Levantar Survey:
    ```bash
@@ -113,17 +113,9 @@ Para ejecutar backend fuera de Docker, usar `backend/.env.example` como base y a
    docker compose up -d backend
    docker compose exec backend python -m alembic upgrade head
    ```
-5. Configurar Traefik compartido para cargar también `traefik/dynamic.survey.yml`.
+5. En `NoSignal_Huertas`, Traefik debe cargar `traefik/dynamic.survey.yml` de este repo (ver `traefik/README.md`). Tras `git pull` en Huertas: `docker compose up -d traefik`.
 
-Una forma recomendada es que Traefik use un directorio de reglas dinámicas:
-
-```yaml
-command:
-  - --providers.file.directory=/etc/traefik/dynamic
-  - --providers.file.watch=true
-```
-
-Y montar allí tanto las reglas de Huertas como las de Survey.
+**Importante:** Survey se sirve por dominio vía Traefik (`https://survey.nosignal.site`), no por el puerto 8081 del host. Si al abrir el dominio ves otra aplicación, revisá conflicto en puerto 80 y la red `nosignal-network`.
 
 ## Verificación
 
