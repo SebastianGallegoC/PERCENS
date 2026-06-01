@@ -18,6 +18,7 @@ import {
   registroFotoLabel,
 } from "@/config/registroFotografico";
 import { displayCuentaConCocinaValue } from "@/lib/cuentaConCocina";
+import { formatPerfilEncuestadorDisplay } from "@/services/encuestadorProfiles";
 import type { FormFieldKey } from "@/types/formFields";
 
 const rowClass =
@@ -48,6 +49,8 @@ function displayFieldValue(key: FormFieldKey, raw: unknown, datos: Record<string
 
 export interface FormularioSnapshot {
   id_perfil_encuestador?: number | null;
+  /** Nombre del perfil (caché local); opcional si solo se conoce el id. */
+  encuestador_perfil_nombre?: string | null;
   datos_formulario: Record<string, unknown>;
   gps?: { latitud: number; longitud: number; precision?: number | null } | null;
   /** `data` = data URL local; `path` = ruta en servidor; `serverFormId` + `serverIndex` = imagen vía API autenticado. */
@@ -124,12 +127,18 @@ export const FormularioRespuestaReadOnly = ({
   const [remoteSrcMap, setRemoteSrcMap] = useState<
     Record<string, string | null>
   >({});
-  const hasAnyField = FORM_SECTIONS.some((sec) =>
-    sec.fields.some((key) => {
+  const hasPerfilEncuestador =
+    typeof snapshot.id_perfil_encuestador === "number" &&
+    snapshot.id_perfil_encuestador > 0;
+  const hasAnyField = FORM_SECTIONS.some((sec) => {
+    if (sec.id === "encuestador") {
+      return hasPerfilEncuestador;
+    }
+    return sec.fields.some((key) => {
       const v = datos[key];
       return v != null && String(v).trim() !== "";
-    }),
-  );
+    });
+  });
 
   if (!hasAnyField && !gps && fotos.length === 0) {
     return (
@@ -175,16 +184,6 @@ export const FormularioRespuestaReadOnly = ({
           >
             Ver en OpenStreetMap
           </a>
-        </section>
-      ) : null}
-
-      {typeof snapshot.id_perfil_encuestador === "number" &&
-      snapshot.id_perfil_encuestador > 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-slate-50/90 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Perfil de encuestador</h3>
-          <p className="mt-2 text-sm text-slate-700">
-            ID de perfil relacionado: {snapshot.id_perfil_encuestador}
-          </p>
         </section>
       ) : null}
 
@@ -282,15 +281,40 @@ export const FormularioRespuestaReadOnly = ({
       />
 
       <div className="space-y-2">
-        {FORM_SECTIONS.map((section, idx) => (
-          <ReadOnlySection
-            key={section.id}
-            sectionTitle={section.title}
-            fieldKeys={section.fields}
-            datos={datos}
-            initiallyOpen={idx === 0}
-          />
-        ))}
+        {FORM_SECTIONS.map((section, idx) =>
+          section.id === "encuestador" ? (
+            <details
+              key={section.id}
+              className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md"
+              open={idx === 0}
+            >
+              <summary className="cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
+                {section.title}
+              </summary>
+              <dl className="border-t border-slate-100 px-4 pb-3 pt-1">
+                <div className={rowClass}>
+                  <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500 sm:w-[42%]">
+                    {fieldLabel("id_perfil_encuestador")}
+                  </dt>
+                  <dd className="min-w-0 break-words text-sm text-slate-900 [overflow-wrap:anywhere] sm:text-right">
+                    {formatPerfilEncuestadorDisplay(
+                      snapshot.id_perfil_encuestador,
+                      snapshot.encuestador_perfil_nombre,
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            </details>
+          ) : (
+            <ReadOnlySection
+              key={section.id}
+              sectionTitle={section.title}
+              fieldKeys={section.fields}
+              datos={datos}
+              initiallyOpen={idx === 0}
+            />
+          ),
+        )}
       </div>
     </div>
   );

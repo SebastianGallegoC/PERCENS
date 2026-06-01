@@ -37,3 +37,42 @@ export async function listEnabledEncuestadorProfilesLocal(
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
     .map((r) => ({ id: r.id, nombre: r.nombre }));
 }
+
+/** Texto legible para detalle / solo lectura del formulario. */
+export function formatPerfilEncuestadorDisplay(
+  id: number | null | undefined,
+  nombre?: string | null,
+): string {
+  if (typeof id !== "number" || !Number.isFinite(id) || id <= 0) {
+    return "—";
+  }
+  const label = nombre?.trim();
+  if (label) {
+    return `${label} (ID ${id})`;
+  }
+  return `Perfil ID ${id}`;
+}
+
+export async function resolveEncuestadorProfileNombre(
+  username: string,
+  profileId: number | null | undefined,
+): Promise<string | null> {
+  if (typeof profileId !== "number" || !Number.isFinite(profileId) || profileId <= 0) {
+    return null;
+  }
+  const local = await listEnabledEncuestadorProfilesLocal(username);
+  return local.find((p) => p.id === profileId)?.nombre ?? null;
+}
+
+export async function enrichFormularioSnapshotEncuestador<
+  T extends { id_perfil_encuestador?: number | null; encuestador_perfil_nombre?: string | null },
+>(snapshot: T, username: string | null): Promise<T> {
+  const id = snapshot.id_perfil_encuestador;
+  if (typeof id !== "number" || id <= 0) {
+    return { ...snapshot, encuestador_perfil_nombre: null };
+  }
+  const nombre = username
+    ? await resolveEncuestadorProfileNombre(username, id)
+    : null;
+  return { ...snapshot, encuestador_perfil_nombre: nombre };
+}

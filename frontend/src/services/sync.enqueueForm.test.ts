@@ -78,4 +78,13 @@ describe("enqueueForm", () => {
     await enqueueForm(baseForm());
     expect(mocks.precargasPut).not.toHaveBeenCalled();
   });
+
+  it("persiste id_perfil_encuestador en historial", async () => {
+    const form = baseForm();
+    form.id_perfil_encuestador = 42;
+    await enqueueForm(form);
+    expect(mocks.historialPut).toHaveBeenCalledTimes(1);
+    const historial = mocks.historialPut.mock.calls[0][0];
+    expect(historial.id_perfil_encuestador).toBe(42);
+  });
 });

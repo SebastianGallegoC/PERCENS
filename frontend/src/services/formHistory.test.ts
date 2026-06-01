@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { FormReadItem } from "@/services/api";
 import type { HistorialForm, PrecargaForm } from "@/services/db";
 import {
+  coalesceIdPerfilEncuestador,
   filterDisplayRowsWithPrecarga,
   getBeneficiarioDisplayName,
   resolveDatosFormularioForExport,
@@ -14,6 +15,16 @@ import {
   rowsForOfflineAwareList,
   type DisplayRow,
 } from "@/services/formHistory";
+
+describe("coalesceIdPerfilEncuestador", () => {
+  it("prioriza el primer id válido", () => {
+    expect(coalesceIdPerfilEncuestador(null, 0, undefined, 4, 9)).toBe(4);
+  });
+
+  it("devuelve null si ninguno es válido", () => {
+    expect(coalesceIdPerfilEncuestador(null, 0, -1)).toBeNull();
+  });
+});
 
 describe("formHistory — beneficiario", () => {
   it("getBeneficiarioDisplayName prioriza servidor y recorta espacios", () => {

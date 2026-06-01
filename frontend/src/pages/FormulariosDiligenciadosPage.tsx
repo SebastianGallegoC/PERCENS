@@ -36,6 +36,7 @@ import {
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import {
   buildFormValuesFromSnapshot,
+  coalesceIdPerfilEncuestador,
   getBeneficiarioDisplayName,
   getFechaReferenciaEnvio,
   mapServerFotos,
@@ -49,6 +50,7 @@ import {
   precargaToSnapshot,
   type DisplayRow,
 } from "@/services/formHistory";
+import { enrichFormularioSnapshotEncuestador } from "@/services/encuestadorProfiles";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
   DETAIL_SOURCE_COLOR,
@@ -315,6 +317,16 @@ export const FormulariosDiligenciadosPage = () => {
     async (row: DisplayRow, opts?: { refreshOnly?: boolean }) => {
       const refreshOnly = opts?.refreshOnly === true;
       const isStillThisRow = () => selectedIdRef.current === row.id_formulario;
+      const commitDetailSnapshot = async (base: FormularioSnapshot) => {
+        const enriched = await enrichFormularioSnapshotEncuestador(
+          base,
+          authUsername,
+        );
+        if (!isStillThisRow()) {
+          return;
+        }
+        setDetailSnapshot(enriched);
+      };
 
       if (!refreshOnly) {
         selectedIdRef.current = row.id_formulario;
@@ -334,8 +346,13 @@ export const FormulariosDiligenciadosPage = () => {
         }
         if (queued) {
           setDetailPrecarga(precargaLocal);
-          setDetailSnapshot({
-            id_perfil_encuestador: queued.id_perfil_encuestador ?? null,
+          await commitDetailSnapshot({
+            id_perfil_encuestador: coalesceIdPerfilEncuestador(
+              queued.id_perfil_encuestador,
+              row.historial?.id_perfil_encuestador,
+              row.server?.id_perfil_encuestador,
+              precargaLocal?.id_perfil_encuestador,
+            ),
             datos_formulario: queued.datos_formulario ?? {},
             gps: queued.gps ?? null,
             fotos: queued.fotos ?? [],
@@ -378,8 +395,12 @@ export const FormulariosDiligenciadosPage = () => {
           if (!isStillThisRow()) {
             return;
           }
-          setDetailSnapshot({
-            id_perfil_encuestador: row.server.id_perfil_encuestador ?? null,
+          await commitDetailSnapshot({
+            id_perfil_encuestador: coalesceIdPerfilEncuestador(
+              row.server.id_perfil_encuestador,
+              row.historial?.id_perfil_encuestador,
+              precargaLocal?.id_perfil_encuestador,
+            ),
             datos_formulario: (row.server.datos_formulario ?? {}) as Record<
               string,
               unknown
@@ -400,7 +421,7 @@ export const FormulariosDiligenciadosPage = () => {
             return;
           }
           setDetailPrecarga(precargaLocal);
-          setDetailSnapshot(precargaToSnapshot(precargaLocal));
+          await commitDetailSnapshot(precargaToSnapshot(precargaLocal));
           setDetailSource("precarga");
           return;
         }
@@ -413,8 +434,11 @@ export const FormulariosDiligenciadosPage = () => {
           if (!isStillThisRow()) {
             return;
           }
-          setDetailSnapshot({
-            id_perfil_encuestador: h.id_perfil_encuestador ?? null,
+          await commitDetailSnapshot({
+            id_perfil_encuestador: coalesceIdPerfilEncuestador(
+              h.id_perfil_encuestador,
+              precargaMap.get(row.id_formulario)?.id_perfil_encuestador,
+            ),
             datos_formulario: h.datos_formulario ?? {},
             gps: h.gps ?? null,
             fotos,
@@ -435,7 +459,7 @@ export const FormulariosDiligenciadosPage = () => {
         }
       }
     },
-    [precargaMap],
+    [authUsername, precargaMap],
   );
 
   const toggleOrSelectRow = useCallback(
@@ -514,7 +538,10 @@ export const FormulariosDiligenciadosPage = () => {
             }
           }
           snapshot = {
-            id_perfil_encuestador: row.server.id_perfil_encuestador ?? null,
+            id_perfil_encuestador: coalesceIdPerfilEncuestador(
+              row.server.id_perfil_encuestador,
+              row.historial?.id_perfil_encuestador,
+            ),
             datos_formulario: (row.server.datos_formulario ?? {}) as Record<
               string,
               unknown
@@ -528,7 +555,10 @@ export const FormulariosDiligenciadosPage = () => {
           };
         } else if (row.historial) {
           snapshot = {
-            id_perfil_encuestador: row.historial.id_perfil_encuestador ?? null,
+            id_perfil_encuestador: coalesceIdPerfilEncuestador(
+              row.historial.id_perfil_encuestador,
+              precargaMap.get(row.id_formulario)?.id_perfil_encuestador,
+            ),
             datos_formulario: row.historial.datos_formulario ?? {},
             gps: row.historial.gps ?? null,
             fotos: row.historial.fotos ?? [],
@@ -583,7 +613,11 @@ export const FormulariosDiligenciadosPage = () => {
         await loadList();
         if (selectedId === row.id_formulario) {
           setDetailPrecarga(precarga);
-          setDetailSnapshot(precargaToSnapshot(precarga));
+          const detail = await enrichFormularioSnapshotEncuestador(
+            precargaToSnapshot(precarga),
+            authUsername,
+          );
+          setDetailSnapshot(detail);
         }
         if (failedFotos > 0) {
           setPrecargaError(

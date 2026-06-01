@@ -51,14 +51,45 @@ vi.mock("@/services/db", () => ({
 
 import { listEnabledEncuestadorProfilesApi } from "@/services/api";
 import {
+  formatPerfilEncuestadorDisplay,
   listEnabledEncuestadorProfilesLocal,
+  resolveEncuestadorProfileNombre,
   syncEnabledEncuestadorProfiles,
 } from "@/services/encuestadorProfiles";
+
+describe("formatPerfilEncuestadorDisplay", () => {
+  it("muestra nombre e id cuando hay caché", () => {
+    expect(formatPerfilEncuestadorDisplay(3, "Ana Pérez")).toBe("Ana Pérez (ID 3)");
+  });
+
+  it("muestra solo id si no hay nombre", () => {
+    expect(formatPerfilEncuestadorDisplay(5, null)).toBe("Perfil ID 5");
+  });
+
+  it("muestra guión sin perfil válido", () => {
+    expect(formatPerfilEncuestadorDisplay(null)).toBe("—");
+    expect(formatPerfilEncuestadorDisplay(0)).toBe("—");
+  });
+});
 
 describe("encuestadorProfiles", () => {
   beforeEach(() => {
     cacheStore.length = 0;
     vi.clearAllMocks();
+  });
+
+  it("resolveEncuestadorProfileNombre lee desde caché local", async () => {
+    cacheStore.push({
+      id: 7,
+      username: "u1",
+      nombre: "Carlos Ruiz",
+      habilitado: true,
+      updated_at: "2026-01-01T00:00:00Z",
+    });
+    await expect(resolveEncuestadorProfileNombre("u1", 7)).resolves.toBe(
+      "Carlos Ruiz",
+    );
+    await expect(resolveEncuestadorProfileNombre("u1", 99)).resolves.toBeNull();
   });
 
   it("syncEnabledEncuestadorProfiles persiste id y nombre por usuario", async () => {

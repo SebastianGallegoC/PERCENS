@@ -355,14 +355,28 @@ export function parseFiltroDiaFin(isoDay: string): number {
   return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
 }
 
+/** Toma el primer id de perfil válido entre varias fuentes (servidor, historial, cola, etc.). */
+export function coalesceIdPerfilEncuestador(
+  ...values: Array<number | null | undefined>
+): number | null {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+      return value;
+    }
+  }
+  return null;
+}
+
 export function precargaToSnapshot(precarga: {
   id_perfil_encuestador?: number | null;
+  encuestador_perfil_nombre?: string | null;
   datos_formulario?: Record<string, unknown>;
   gps?: FormularioSnapshot["gps"];
   fotos?: FormularioSnapshot["fotos"];
 }): FormularioSnapshot {
   return {
     id_perfil_encuestador: precarga.id_perfil_encuestador ?? null,
+    encuestador_perfil_nombre: precarga.encuestador_perfil_nombre ?? null,
     datos_formulario: precarga.datos_formulario ?? {},
     gps: precarga.gps ?? null,
     fotos: precarga.fotos ?? [],
