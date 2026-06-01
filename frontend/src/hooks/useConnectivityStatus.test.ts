@@ -4,8 +4,8 @@ import { buildHealthUrl, checkConnectivity } from "@/hooks/useConnectivityStatus
 
 describe("useConnectivityStatus helpers", () => {
   it("buildHealthUrl usa la base del API cuando existe", () => {
-    expect(buildHealthUrl("https://api.nosignal.site")).toBe(
-      "https://api.nosignal.site/health",
+    expect(buildHealthUrl("https://api.survey.nosignal.site")).toBe(
+      "https://api.survey.nosignal.site/health",
     );
   });
 
@@ -19,12 +19,12 @@ describe("useConnectivityStatus helpers", () => {
     const fetchImpl = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
 
     await expect(
-      checkConnectivity("https://api.nosignal.site/health", fetchImpl as typeof fetch),
+      checkConnectivity("https://api.survey.nosignal.site/health", fetchImpl as typeof fetch),
     ).resolves.toBe(true);
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.nosignal.site/health",
+      "https://api.survey.nosignal.site/health",
       expect.objectContaining({
         cache: "no-store",
         credentials: "omit",
@@ -37,7 +37,7 @@ describe("useConnectivityStatus helpers", () => {
     const fetchImpl = vi.fn().mockRejectedValue(new Error("Network error"));
 
     await expect(
-      checkConnectivity("https://api.nosignal.site/health", fetchImpl as typeof fetch),
+      checkConnectivity("https://api.survey.nosignal.site/health", fetchImpl as typeof fetch),
     ).resolves.toBe(false);
   });
 });
