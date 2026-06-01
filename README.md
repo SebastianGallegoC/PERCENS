@@ -117,6 +117,8 @@ Para ejecutar backend fuera de Docker, usar `backend/.env.example` como base y a
 
 **Importante:** Survey se sirve por dominio vía Traefik (`https://survey.nosignal.site`), no por el puerto 8081 del host. Si al abrir el dominio ves otra aplicación, revisá conflicto en puerto 80 y la red `nosignal-network`.
 
+**BD en Docker:** el backend Survey comparte `nosignal-network` con Huertas, donde también existe un servicio llamado `db`. En `DATABASE_URL` usá el host `nosignal-survey-db` (nombre del contenedor), no `db`, o el API puede autenticarse contra la Postgres de Huertas y fallar con `InvalidPasswordError` para el usuario `nosignal_survey`.
+
 ## Verificación
 
 ```bash
