@@ -61,7 +61,7 @@ export const InicioPage = () => {
         <section
           data-testid="inicio-acciones"
           aria-label="Acciones principales"
-          className="grid gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
+          className="grid grid-cols-1 gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
         >
           <Link
             to="/formulario"
@@ -70,15 +70,15 @@ export const InicioPage = () => {
           >
             <Card className="h-full border-teal-100 bg-white/90 shadow-[0_18px_40px_-35px_rgba(15,118,110,0.6)] transition group-hover:-translate-y-0.5">
               <CardHeader className="gap-3">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary sm:h-11 sm:w-11">
-                    <ClipboardList className="h-5 w-5 sm:h-5 sm:w-5" aria-hidden />
+                <div className="flex items-start gap-3 max-md:flex-row md:flex-col md:gap-2.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary md:h-11 md:w-11">
+                    <ClipboardList className="h-5 w-5" aria-hidden />
                   </span>
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <CardTitle className="leading-snug text-teal-800 sm:leading-normal">
+                  <div className="min-w-0 flex-1 space-y-1 md:space-y-1.5">
+                    <CardTitle className="text-base leading-snug text-teal-800 md:text-sm md:leading-snug lg:text-base lg:leading-snug">
                       Completar encuesta
                     </CardTitle>
-                    <CardDescription className="text-xs leading-snug text-slate-600 sm:text-sm sm:leading-normal">
+                    <CardDescription className="text-xs leading-snug text-slate-600 md:leading-snug lg:text-sm lg:leading-normal">
                       Captura nuevos registros de visita con GPS, fotos y sincronización
                       offline-first.
                     </CardDescription>
@@ -94,15 +94,15 @@ export const InicioPage = () => {
           >
             <Card className="h-full border-slate-200 bg-white/90 shadow-[0_18px_40px_-35px_rgba(30,41,59,0.45)] transition group-hover:-translate-y-0.5">
               <CardHeader className="gap-3">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 sm:h-11 sm:w-11">
+                <div className="flex items-start gap-3 max-md:flex-row md:flex-col md:gap-2.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 md:h-11 md:w-11">
                     <FileSpreadsheet className="h-5 w-5" aria-hidden />
                   </span>
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <CardTitle className="leading-snug text-slate-900 sm:leading-normal">
+                  <div className="min-w-0 flex-1 space-y-1 md:space-y-1.5">
+                    <CardTitle className="text-base leading-snug text-slate-900 md:text-sm md:leading-snug lg:text-base lg:leading-snug">
                       Ver encuestas diligenciadas
                     </CardTitle>
-                    <CardDescription className="text-xs leading-snug text-slate-600 sm:text-sm sm:leading-normal">
+                    <CardDescription className="text-xs leading-snug text-slate-600 md:leading-snug lg:text-sm lg:leading-normal">
                       Historial de este equipo y, si hay sesión, formularios ya
                       guardados en el servidor.
                     </CardDescription>
@@ -118,15 +118,15 @@ export const InicioPage = () => {
           >
             <Card className="h-full border-indigo-100 bg-white/90 shadow-[0_18px_40px_-35px_rgba(79,70,229,0.6)] transition group-hover:-translate-y-0.5">
               <CardHeader className="gap-3">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 sm:h-11 sm:w-11">
+                <div className="flex items-start gap-3 max-md:flex-row md:flex-col md:gap-2.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 md:h-11 md:w-11">
                     <UserRound className="h-5 w-5" aria-hidden />
                   </span>
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <CardTitle className="leading-snug text-indigo-800 sm:leading-normal">
+                  <div className="min-w-0 flex-1 space-y-1 md:space-y-1.5">
+                    <CardTitle className="text-base leading-snug text-indigo-800 md:text-sm md:leading-snug lg:text-base lg:leading-snug">
                       Perfil encuestador
                     </CardTitle>
-                    <CardDescription className="text-xs leading-snug text-slate-600 sm:text-sm sm:leading-normal">
+                    <CardDescription className="text-xs leading-snug text-slate-600 md:leading-snug lg:text-sm lg:leading-normal">
                       Crea, edita, deshabilita o elimina perfiles para diligenciar más rápido.
                     </CardDescription>
                   </div>
@@ -142,15 +142,15 @@ export const InicioPage = () => {
             >
               <Card className="h-full border-emerald-100 bg-white/90 shadow-[0_18px_40px_-35px_rgba(16,185,129,0.45)] transition group-hover:-translate-y-0.5">
                 <CardHeader className="gap-3">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 sm:h-11 sm:w-11">
+                  <div className="flex items-start gap-3 max-md:flex-row md:flex-col md:gap-2.5">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 md:h-11 md:w-11">
                       <BarChart3 className="h-5 w-5" aria-hidden />
                     </span>
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <CardTitle className="leading-snug text-emerald-900 sm:leading-normal">
+                    <div className="min-w-0 flex-1 space-y-1 md:space-y-1.5">
+                      <CardTitle className="text-base leading-snug text-emerald-900 md:text-sm md:leading-snug lg:text-base lg:leading-snug">
                         Datos
                       </CardTitle>
-                      <CardDescription className="text-xs leading-snug text-slate-600 sm:text-sm sm:leading-normal">
+                      <CardDescription className="text-xs leading-snug text-slate-600 md:leading-snug lg:text-sm lg:leading-normal">
                         Gráficos de validación con filtros por municipio y fecha de visita.
                       </CardDescription>
                     </div>

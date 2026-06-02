@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { useFormStats } from "@/hooks/useFormStats";
@@ -134,35 +136,33 @@ export const DatosPage = () => {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#e2f2ee_0,_#f6f7f5_45%,_#f6f7f5_100%)] px-3 py-4 text-slate-900 sm:px-4 sm:py-8">
       <div className="mx-auto w-full max-w-5xl">
-        <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <Link
-              to="/inicio"
-              className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-teal-800 hover:underline"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              Inicio
-            </Link>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-teal-700 sm:text-xs">
-              NoSignal Survey
-            </p>
-            <h1 className="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">
-              Datos
-            </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              Estadísticas de formularios sincronizados en el servidor.
-            </p>
+        <header className="mb-4 sm:mb-6">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/inicio">Regresar</Link>
+            </Button>
+            {online && !anyLoading ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={refreshAll}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" aria-hidden />
+                Actualizar
+              </Button>
+            ) : null}
           </div>
-          {online && !anyLoading ? (
-            <button
-              type="button"
-              onClick={refreshAll}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
-            >
-              <RefreshCw className="h-4 w-4" aria-hidden />
-              Actualizar
-            </button>
-          ) : null}
+          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-teal-700 sm:text-xs sm:tracking-[0.35em]">
+            NoSignal Survey
+          </p>
+          <h1 className="mt-1 text-xl font-semibold leading-tight text-slate-900 sm:mt-2 sm:text-3xl sm:leading-normal">
+            Datos
+          </h1>
+          <p className="mt-1 text-xs leading-snug text-muted-foreground sm:mt-2 sm:text-sm sm:leading-normal">
+            Estadísticas de formularios sincronizados en el servidor.
+          </p>
         </header>
 
         {!online ? <DatosOfflineBanner /> : null}
