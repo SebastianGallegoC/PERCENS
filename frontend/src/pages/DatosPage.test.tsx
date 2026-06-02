@@ -3,6 +3,9 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockFetchFormStats = vi.fn();
+const mockFetchFormStatsMunicipios = vi.fn();
+const mockFetchFormStatsMonthly = vi.fn();
+const mockFetchFormStatsAnios = vi.fn();
 const mockUseConnectivity = vi.fn(() => true);
 
 vi.mock("@/hooks/useConnectivityStatus", () => ({
@@ -14,6 +17,10 @@ vi.mock("@/services/api", async (importOriginal) => {
   return {
     ...actual,
     fetchFormStatsFromApi: (...args: unknown[]) => mockFetchFormStats(...args),
+    fetchFormStatsMunicipiosFromApi: () => mockFetchFormStatsMunicipios(),
+    fetchFormStatsMonthlyFromApi: (...args: unknown[]) =>
+      mockFetchFormStatsMonthly(...args),
+    fetchFormStatsAniosFromApi: () => mockFetchFormStatsAnios(),
   };
 });
 
@@ -40,6 +47,33 @@ describe("DatosPage", () => {
     vi.clearAllMocks();
     localStorage.clear();
     mockUseConnectivity.mockReturnValue(true);
+    mockFetchFormStatsMunicipios.mockResolvedValue(["Cúcuta", "Medellín"]);
+    mockFetchFormStatsAnios.mockResolvedValue([2026, 2025]);
+    mockFetchFormStatsMonthly.mockResolvedValue({
+      anio: 2026,
+      municipios: ["Cúcuta"],
+      etiquetas_mes: [
+        "Ene",
+        "Feb",
+        "Mar",
+        "Abr",
+        "May",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dic",
+      ],
+      series: [
+        {
+          municipio: "Cúcuta",
+          totales: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        },
+      ],
+      total: 2,
+    });
   });
 
   it("muestra banner offline sin llamar al API", async () => {
@@ -57,6 +91,26 @@ describe("DatosPage", () => {
     });
   });
 
+  it("solo lista municipios presentes en formularios del servidor", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStatsMunicipios.mockResolvedValue(["Cúcuta"]);
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(mockFetchFormStatsMunicipios).toHaveBeenCalled();
+    });
+    const select = screen.getAllByRole("combobox")[0];
+    const options = Array.from(select.querySelectorAll("option")).map(
+      (o) => o.textContent,
+    );
+    expect(options).toContain("Cúcuta");
+    expect(options).not.toContain("Abejorral");
+  });
+
   it("muestra gráfico cuando hay datos del servidor", async () => {
     localStorage.setItem("nosignal_access_token", "token");
     mockFetchFormStats.mockResolvedValue(sampleStats);
@@ -71,6 +125,22 @@ describe("DatosPage", () => {
     });
   });
 
+  it("muestra gráfico mensual al seleccionar municipio", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(mockFetchFormStatsMunicipios).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("checkbox", { name: "Cúcuta" }));
+    await waitFor(() => {
+      expect(mockFetchFormStatsMonthly).toHaveBeenCalled();
+      expect(screen.getByText(/Total en 2026/i)).toBeInTheDocument();
+    });
+  });
+
   it("aplica filtro de municipio al cambiar el select", async () => {
     localStorage.setItem("nosignal_access_token", "token");
     mockFetchFormStats.mockResolvedValue(sampleStats);
@@ -81,7 +151,7 @@ describe("DatosPage", () => {
     );
     await waitFor(() => expect(mockFetchFormStats).toHaveBeenCalled());
     const callsBefore = mockFetchFormStats.mock.calls.length;
-    const select = screen.getByLabelText(/Municipio/i);
+    const select = screen.getAllByRole("combobox")[0];
     fireEvent.change(select, { target: { value: "Cúcuta" } });
     await waitFor(() => {
       expect(mockFetchFormStats.mock.calls.length).toBeGreaterThan(callsBefore);

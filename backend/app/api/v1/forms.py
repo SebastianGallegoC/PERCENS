@@ -18,8 +18,20 @@ from app.repository.forms import (
 )
 from app.schemas.form_payload import FormPayload
 from app.schemas.form_read import FormListResponse, FormReadItem
-from app.schemas.form_stats import FormStatsQueryParams, FormStatsResponse
-from app.services.form_stats import get_validation_stats
+from app.schemas.form_stats import (
+    FormStatsAniosResponse,
+    FormStatsMonthlyQueryParams,
+    FormStatsMonthlyResponse,
+    FormStatsMunicipiosResponse,
+    FormStatsQueryParams,
+    FormStatsResponse,
+)
+from app.services.form_stats import (
+    get_distinct_anios,
+    get_distinct_municipios,
+    get_monthly_diligencias,
+    get_validation_stats,
+)
 from app.services.forms import persist_form
 from app.services.storage import media_type_for_image, validated_photo_path
 
@@ -64,6 +76,59 @@ async def list_forms(
         _current_user,
     )
     return FormListResponse(items=items)
+
+
+@router.get("/stats/anios", response_model=FormStatsAniosResponse)
+async def form_stats_anios(
+    session: AsyncSession = Depends(get_session),
+    _current_user: str = Depends(get_current_user),
+):
+    """Años distintos con fecha de visita en formularios sincronizados."""
+    try:
+        return await get_distinct_anios(session)
+    except SQLAlchemyError:
+        logger.exception("form_stats_anios DB error user=%r", _current_user)
+        raise
+
+
+@router.get("/stats/diligencias-mensuales", response_model=FormStatsMonthlyResponse)
+async def form_stats_monthly_diligencias(
+    anio: int = Query(..., ge=2000, le=2100),
+    municipios: list[str] = Query(default=[]),
+    session: AsyncSession = Depends(get_session),
+    _current_user: str = Depends(get_current_user),
+):
+    """Conteo mensual de formularios por municipio (fecha de referencia: fecha_visita)."""
+    try:
+        params = FormStatsMonthlyQueryParams(anio=anio, municipios=municipios)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail="invalid_monthly_stats_query") from exc
+
+    if not params.municipios:
+        raise HTTPException(status_code=422, detail="municipios_required")
+
+    try:
+        return await get_monthly_diligencias(
+            session,
+            anio=params.anio,
+            municipios=params.municipios,
+        )
+    except SQLAlchemyError:
+        logger.exception("form_stats_monthly DB error user=%r", _current_user)
+        raise
+
+
+@router.get("/stats/municipios", response_model=FormStatsMunicipiosResponse)
+async def form_stats_municipios(
+    session: AsyncSession = Depends(get_session),
+    _current_user: str = Depends(get_current_user),
+):
+    """Municipios distintos usados en formularios del servidor (para filtros de Datos)."""
+    try:
+        return await get_distinct_municipios(session)
+    except SQLAlchemyError:
+        logger.exception("form_stats_municipios DB error user=%r", _current_user)
+        raise
 
 
 @router.get("/stats", response_model=FormStatsResponse)

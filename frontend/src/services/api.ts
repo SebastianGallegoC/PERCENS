@@ -205,6 +205,28 @@ export interface FormStatsQuery {
   fecha_hasta?: string;
 }
 
+export interface FormStatsMunicipiosResponse {
+  municipios: string[];
+}
+
+export interface FormStatsMonthlyMunicipioSerie {
+  municipio: string;
+  totales: number[];
+}
+
+export interface FormStatsMonthlyResponse {
+  anio: number;
+  municipios: string[];
+  etiquetas_mes: string[];
+  series: FormStatsMonthlyMunicipioSerie[];
+  total: number;
+}
+
+export interface FormStatsMonthlyQuery {
+  anio: number;
+  municipios: string[];
+}
+
 /** Elimina el formulario en el servidor (requiere JWT). */
 export const deleteFormFromApi = async (formId: string): Promise<void> => {
   const url = `${API_BASE}/api/v1/forms/${encodeURIComponent(formId)}`;
@@ -280,6 +302,60 @@ export const fetchFormStatsFromApi = async (
     throw new Error(t || `forms_stats_${response.status}`);
   }
   return (await response.json()) as FormStatsResponse;
+};
+
+/** Años con fecha de visita en formularios (`GET /api/v1/forms/stats/anios`). */
+export const fetchFormStatsAniosFromApi = async (): Promise<number[]> => {
+  const url = `${API_BASE}/api/v1/forms/stats/anios`;
+  const response = await fetch(url, {
+    headers: { ...authHeaders() },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `forms_stats_anios_${response.status}`);
+  }
+  const body = (await response.json()) as { anios?: number[] };
+  return Array.isArray(body.anios) ? body.anios : [];
+};
+
+/** Diligencias por mes y municipio (`GET /api/v1/forms/stats/diligencias-mensuales`). */
+export const fetchFormStatsMonthlyFromApi = async (
+  params: FormStatsMonthlyQuery,
+): Promise<FormStatsMonthlyResponse> => {
+  const search = new URLSearchParams();
+  search.set("anio", String(params.anio));
+  for (const m of params.municipios) {
+    const trimmed = m.trim();
+    if (trimmed) {
+      search.append("municipios", trimmed);
+    }
+  }
+  const url = `${API_BASE}/api/v1/forms/stats/diligencias-mensuales?${search.toString()}`;
+  const response = await fetch(url, {
+    headers: { ...authHeaders() },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `forms_stats_monthly_${response.status}`);
+  }
+  return (await response.json()) as FormStatsMonthlyResponse;
+};
+
+/** Municipios distintos en formularios del servidor (`GET /api/v1/forms/stats/municipios`). */
+export const fetchFormStatsMunicipiosFromApi = async (): Promise<string[]> => {
+  const url = `${API_BASE}/api/v1/forms/stats/municipios`;
+  const response = await fetch(url, {
+    headers: { ...authHeaders() },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `forms_stats_municipios_${response.status}`);
+  }
+  const body = (await response.json()) as FormStatsMunicipiosResponse;
+  return Array.isArray(body.municipios) ? body.municipios : [];
 };
 
 /** Devuelve detalle de un formulario por id (incluye fotos como rutas en `fotos`). */

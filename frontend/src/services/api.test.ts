@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   deleteFormFromApi,
   fetchFormStatsFromApi,
+  fetchFormStatsMonthlyFromApi,
+  fetchFormStatsMunicipiosFromApi,
   listFormsFromApi,
   loginApi,
 } from "./api";
@@ -86,6 +88,57 @@ describe("fetchFormStatsFromApi", () => {
     const url = String(fetchMock.mock.calls[0]?.[0]);
     expect(url).toContain("municipio=Cali");
     expect(url).toContain("fecha_desde=2026-01-01");
+  });
+});
+
+describe("fetchFormStatsMunicipiosFromApi", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("devuelve lista de municipios del servidor", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ municipios: ["Cúcuta", "Medellín"] }),
+      }),
+    );
+    const list = await fetchFormStatsMunicipiosFromApi();
+    expect(list).toEqual(["Cúcuta", "Medellín"]);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/forms/stats/municipios"),
+      expect.any(Object),
+    );
+  });
+});
+
+describe("fetchFormStatsMonthlyFromApi", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("envía anio y municipios repetidos en query", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          anio: 2026,
+          municipios: ["Cúcuta"],
+          etiquetas_mes: ["Ene"],
+          series: [],
+          total: 0,
+        }),
+      }),
+    );
+    await fetchFormStatsMonthlyFromApi({
+      anio: 2026,
+      municipios: ["Cúcuta", "Medellín"],
+    });
+    const url = String(vi.mocked(fetch).mock.calls[0]?.[0]);
+    expect(url).toContain("anio=2026");
+    expect(url).toContain("municipios=");
   });
 });
 
