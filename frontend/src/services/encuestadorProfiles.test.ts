@@ -30,7 +30,10 @@ const cacheMocks = vi.hoisted(() => ({
 
 vi.mock("@/services/api", () => ({
   listEnabledEncuestadorProfilesApi: vi.fn(),
+  listEncuestadorProfilesApi: vi.fn(),
 }));
+
+const sessionStore: { username?: string } = {};
 
 const localFormsStore = {
   formularios: [] as Array<{ id_perfil_encuestador?: number | null }>,
@@ -60,12 +63,23 @@ vi.mock("@/services/db", () => ({
         }),
       }),
       bulkPut: (rows: EncuestadorProfileCacheRow[]) => cacheMocks.bulkPut(rows),
+      put: (row: EncuestadorProfileCacheRow) => cacheMocks.bulkPut([row]),
+    },
+    sesionLocal: {
+      get: async () =>
+        sessionStore.username
+          ? { id: "current" as const, accessToken: "t", username: sessionStore.username }
+          : undefined,
     },
   },
 }));
 
-import { listEnabledEncuestadorProfilesApi } from "@/services/api";
 import {
+  listEnabledEncuestadorProfilesApi,
+  listEncuestadorProfilesApi,
+} from "@/services/api";
+import {
+  buildEncuestadorProfilesMapForExport,
   encuestadorProfileCanBeDeleted,
   encuestadorProfileHasServerForms,
   formatPerfilEncuestadorDisplay,
@@ -86,6 +100,65 @@ describe("formatPerfilEncuestadorDisplay", () => {
   it("muestra guión sin perfil válido", () => {
     expect(formatPerfilEncuestadorDisplay(null)).toBe("—");
     expect(formatPerfilEncuestadorDisplay(0)).toBe("—");
+  });
+});
+
+describe("buildEncuestadorProfilesMapForExport", () => {
+  beforeEach(() => {
+    cacheStore.length = 0;
+    sessionStore.username = "encuestador1";
+    vi.clearAllMocks();
+  });
+
+  it("resuelve campos del perfil desde la API", async () => {
+    vi.mocked(listEncuestadorProfilesApi).mockResolvedValue([
+      {
+        id: 7,
+        username_owner: "encuestador1",
+        nombres_apellidos_encuestador: "Ana Encuestadora",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "123",
+        telefono_encuestador: "300",
+        cargo_encuestador: "Encuestador",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "data:image/png;base64,abc",
+        habilitado: true,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+    ]);
+
+    const map = await buildEncuestadorProfilesMapForExport([7]);
+
+    expect(map.get(7)).toEqual({
+      nombres_apellidos_encuestador: "Ana Encuestadora",
+      tipo_documento_encuestador: "CC",
+      numero_documento_encuestador: "123",
+      telefono_encuestador: "300",
+      cargo_encuestador: "Encuestador",
+      empresa_entidad_encuestador: "CENS",
+    });
+  });
+
+  it("usa caché local si la API no responde", async () => {
+    cacheStore.push({
+      id: 9,
+      username: "encuestador1",
+      nombre: "Carlos Ruiz",
+      tipo_documento_encuestador: "CE",
+      numero_documento_encuestador: "999",
+      telefono_encuestador: "301",
+      cargo_encuestador: "Supervisor",
+      empresa_entidad_encuestador: "Entidad",
+      habilitado: true,
+      updated_at: "2026-01-01T00:00:00Z",
+    });
+    vi.mocked(listEncuestadorProfilesApi).mockRejectedValue(new Error("offline"));
+
+    const map = await buildEncuestadorProfilesMapForExport([9]);
+
+    expect(map.get(9)?.nombres_apellidos_encuestador).toBe("Carlos Ruiz");
+    expect(map.get(9)?.tipo_documento_encuestador).toBe("CE");
   });
 });
 

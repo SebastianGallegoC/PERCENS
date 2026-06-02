@@ -7,6 +7,7 @@ import type { DisplayRow } from '@/services/formHistory';
 import {
   resolveDatosFormularioForExport,
   resolveGpsForExport,
+  coalesceIdPerfilEncuestador,
 } from '@/services/formHistory';
 import {
   downloadMatrizCaracterizacionBulkXlsx,
@@ -80,6 +81,12 @@ export const useFormExports = ({
 
         await downloadMatrizCaracterizacionXlsx({
           id_formulario: row.id_formulario,
+          id_perfil_encuestador: coalesceIdPerfilEncuestador(
+            detailSnapshot.id_perfil_encuestador,
+            detailPrecarga?.id_perfil_encuestador,
+            row.historial?.id_perfil_encuestador,
+            row.server?.id_perfil_encuestador,
+          ),
           fecha_hora:
             row.server?.fecha_hora ??
             row.historial?.fecha_envio ??
@@ -194,6 +201,12 @@ export const useFormExports = ({
         );
         return {
           id_formulario: row.id_formulario,
+          id_perfil_encuestador: coalesceIdPerfilEncuestador(
+            queued?.id_perfil_encuestador,
+            row.server?.id_perfil_encuestador,
+            row.historial?.id_perfil_encuestador,
+            row.precargaSolo?.id_perfil_encuestador,
+          ),
           fecha_hora:
             queued?.fecha_hora ??
             row.server?.fecha_hora ??

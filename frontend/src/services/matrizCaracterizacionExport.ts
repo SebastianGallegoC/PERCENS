@@ -6,6 +6,11 @@ import {
   normalizeCoordNumericCell,
 } from "@/lib/coordNumericToken";
 import type { OfflineForm } from "@/services/db";
+import {
+  buildEncuestadorProfilesMapForExport,
+  ENCUESTADOR_EXPORT_FIELD_KEYS,
+  type EncuestadorProfileExportFields,
+} from "@/services/encuestadorProfiles";
 
 export const MATRIZ_COLUMN_COUNT = 29;
 export const MATRIZ_SHEET_NAME = "Plantilla";
@@ -95,6 +100,8 @@ if (MATRIZ_ROW_CELL_SOURCES.length !== MATRIZ_COLUMN_COUNT) {
   );
 }
 
+const ENCUESTADOR_EXPORT_FIELDS = new Set<string>(ENCUESTADOR_EXPORT_FIELD_KEYS);
+
 function strFromDatos(datos: Record<string, unknown>, key: string): string {
   const v = datos[key];
   if (v == null) {
@@ -179,6 +186,7 @@ function cocinaValue(datos: Record<string, unknown>): string {
 function cellValueForSource(
   src: MatrizRowCellSource,
   form: OfflineForm,
+  encuestadorProfiles: Map<number, EncuestadorProfileExportFields>,
 ): string {
   const datos = form.datos_formulario as Record<string, unknown>;
   if (src.kind === "lat") {
@@ -193,14 +201,32 @@ function cellValueForSource(
   if (src.kind === "cocina") {
     return cocinaValue(datos);
   }
+  if (src.key === "firma_encuestador") {
+    return "";
+  }
+  if (ENCUESTADOR_EXPORT_FIELDS.has(src.key)) {
+    const profileId = form.id_perfil_encuestador;
+    if (typeof profileId === "number" && profileId > 0) {
+      const profile = encuestadorProfiles.get(profileId);
+      const fromProfile = profile?.[src.key as keyof EncuestadorProfileExportFields];
+      if (fromProfile) {
+        return fromProfile;
+      }
+    }
+  }
   if ((COORD_NUMERIC_FIELD_KEYS as ReadonlySet<string>).has(src.key)) {
     return coordFieldForMatrizExport(datos, src.key);
   }
   return strFromDatos(datos, src.key);
 }
 
-export function buildMatrizCaracterizacionRow(form: OfflineForm): string[] {
-  return MATRIZ_ROW_CELL_SOURCES.map((src) => cellValueForSource(src, form));
+export function buildMatrizCaracterizacionRow(
+  form: OfflineForm,
+  encuestadorProfiles: Map<number, EncuestadorProfileExportFields> = new Map(),
+): string[] {
+  return MATRIZ_ROW_CELL_SOURCES.map((src) =>
+    cellValueForSource(src, form, encuestadorProfiles),
+  );
 }
 
 function sanitizeFilePart(s: string): string {
@@ -290,8 +316,13 @@ async function loadTemplateWorkbook(): Promise<Workbook | null> {
   }
 }
 
-function writeRow(ws: Worksheet, rowNumber: number, form: OfflineForm): void {
-  const cells = buildMatrizCaracterizacionRow(form);
+function writeRow(
+  ws: Worksheet,
+  rowNumber: number,
+  form: OfflineForm,
+  encuestadorProfiles: Map<number, EncuestadorProfileExportFields>,
+): void {
+  const cells = buildMatrizCaracterizacionRow(form, encuestadorProfiles);
   for (let i = 0; i < cells.length; i += 1) {
     const cell = ws.getCell(rowNumber, i + 1);
     cell.value = cells[i];
@@ -299,22 +330,32 @@ function writeRow(ws: Worksheet, rowNumber: number, form: OfflineForm): void {
   }
 }
 
+async function resolveEncuestadorProfilesForForms(
+  forms: OfflineForm[],
+): Promise<Map<number, EncuestadorProfileExportFields>> {
+  return buildEncuestadorProfilesMapForExport(
+    forms.map((form) => form.id_perfil_encuestador),
+  );
+}
+
 export async function buildMatrizCaracterizacionWorkbook(
   form: OfflineForm,
 ): Promise<Workbook> {
+  const encuestadorProfiles = await resolveEncuestadorProfilesForForms([form]);
   const wb = await loadTemplateWorkbook();
   if (wb) {
     const ws = wb.getWorksheet(MATRIZ_SHEET_NAME) ?? wb.worksheets[0];
     if (ws) {
-      writeRow(ws, MATRIZ_FIRST_DATA_ROW, form);
+      writeRow(ws, MATRIZ_FIRST_DATA_ROW, form, encuestadorProfiles);
       return wb;
     }
   }
-  return buildMatrizCaracterizacionWorkbookFromScratch([form]);
+  return buildMatrizCaracterizacionWorkbookFromScratch([form], encuestadorProfiles);
 }
 
 async function buildMatrizCaracterizacionWorkbookFromScratch(
   forms: OfflineForm[],
+  encuestadorProfiles: Map<number, EncuestadorProfileExportFields>,
 ): Promise<Workbook> {
   const wb = new Workbook();
   const ws = wb.addWorksheet(MATRIZ_SHEET_NAME);
@@ -348,7 +389,9 @@ async function buildMatrizCaracterizacionWorkbookFromScratch(
     c.alignment = { wrapText: true, vertical: "top" };
   });
 
-  forms.forEach((form, i) => writeRow(ws, MATRIZ_FIRST_DATA_ROW + i, form));
+  forms.forEach((form, i) =>
+    writeRow(ws, MATRIZ_FIRST_DATA_ROW + i, form, encuestadorProfiles),
+  );
   ws.columns = MATRIZ_F_PSA_HEADERS.map((h) => ({
     width: Math.min(42, Math.max(14, Math.ceil(h.length * 0.55 + 6))),
   }));
@@ -358,15 +401,18 @@ async function buildMatrizCaracterizacionWorkbookFromScratch(
 export async function buildMatrizCaracterizacionWorkbookBulk(
   forms: OfflineForm[],
 ): Promise<Workbook> {
+  const encuestadorProfiles = await resolveEncuestadorProfilesForForms(forms);
   const wb = await loadTemplateWorkbook();
   if (wb) {
     const ws = wb.getWorksheet(MATRIZ_SHEET_NAME) ?? wb.worksheets[0];
     if (ws) {
-      forms.forEach((form, i) => writeRow(ws, MATRIZ_FIRST_DATA_ROW + i, form));
+      forms.forEach((form, i) =>
+        writeRow(ws, MATRIZ_FIRST_DATA_ROW + i, form, encuestadorProfiles),
+      );
       return wb;
     }
   }
-  return buildMatrizCaracterizacionWorkbookFromScratch(forms);
+  return buildMatrizCaracterizacionWorkbookFromScratch(forms, encuestadorProfiles);
 }
 
 async function downloadWorkbook(wb: Workbook, filename: string): Promise<void> {

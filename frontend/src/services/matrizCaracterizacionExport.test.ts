@@ -84,6 +84,32 @@ describe("matrizCaracterizacionExport — Survey", () => {
     };
     expect(buildMatrizCaracterizacionRow(f)[15]).toBe("Cocina comunitaria");
   });
+
+  it("exporta datos del encuestador desde el perfil y deja la firma vacía", () => {
+    const f = minimalForm();
+    f.id_perfil_encuestador = 7;
+    const profiles = new Map([
+      [
+        7,
+        {
+          nombres_apellidos_encuestador: "Ana Encuestadora",
+          tipo_documento_encuestador: "CC",
+          numero_documento_encuestador: "123456",
+          telefono_encuestador: "3001112233",
+          cargo_encuestador: "Encuestador",
+          empresa_entidad_encuestador: "CENS",
+        },
+      ],
+    ]);
+    const row = buildMatrizCaracterizacionRow(f, profiles);
+    expect(row[22]).toBe("Ana Encuestadora");
+    expect(row[23]).toBe("CC");
+    expect(row[24]).toBe("123456");
+    expect(row[25]).toBe("3001112233");
+    expect(row[26]).toBe("Encuestador");
+    expect(row[27]).toBe("CENS");
+    expect(row[28]).toBe("");
+  });
 });
 
 describe("formatFechaMatriz", () => {

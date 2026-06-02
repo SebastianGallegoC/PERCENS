@@ -83,6 +83,11 @@ export interface EncuestadorProfileCacheRow {
   id: number;
   username: string;
   nombre: string;
+  tipo_documento_encuestador?: string;
+  numero_documento_encuestador?: string;
+  telefono_encuestador?: string;
+  cargo_encuestador?: string;
+  empresa_entidad_encuestador?: string;
   habilitado: boolean;
   updated_at: string;
 }
