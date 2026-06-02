@@ -125,7 +125,7 @@ describe("DatosPage", () => {
     });
   });
 
-  it("muestra gráfico mensual al seleccionar municipio", async () => {
+  it("muestra gráfico mensual con todos los municipios por defecto", async () => {
     localStorage.setItem("nosignal_access_token", "token");
     mockFetchFormStats.mockResolvedValue(sampleStats);
     render(
@@ -133,11 +133,30 @@ describe("DatosPage", () => {
         <DatosPage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(mockFetchFormStatsMunicipios).toHaveBeenCalled());
-    fireEvent.click(screen.getByRole("checkbox", { name: "Cúcuta" }));
     await waitFor(() => {
       expect(mockFetchFormStatsMonthly).toHaveBeenCalled();
+      const lastCall = mockFetchFormStatsMonthly.mock.calls.at(-1)?.[0];
+      expect(lastCall?.municipios).toEqual(expect.arrayContaining(["Cúcuta", "Medellín"]));
       expect(screen.getByText(/Total en 2026/i)).toBeInTheDocument();
+    });
+  });
+
+  it("filtra gráfico mensual al elegir un municipio en el dropdown", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(mockFetchFormStatsMonthly).toHaveBeenCalled());
+    const municipioSelect = screen.getByRole("combobox", {
+      name: /Municipio para gráfico mensual/i,
+    });
+    fireEvent.change(municipioSelect, { target: { value: "Cúcuta" } });
+    await waitFor(() => {
+      const lastCall = mockFetchFormStatsMonthly.mock.calls.at(-1)?.[0];
+      expect(lastCall?.municipios).toEqual(["Cúcuta"]);
     });
   });
 

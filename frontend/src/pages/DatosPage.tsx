@@ -10,7 +10,10 @@ import { DatosFilters } from "@/pages/datos/DatosFilters";
 import { DatosOfflineBanner } from "@/pages/datos/DatosOfflineBanner";
 import { DatosReportSection } from "@/pages/datos/DatosReportSection";
 import { MonthlyDiligenciasChart } from "@/pages/datos/MonthlyDiligenciasChart";
-import { MonthlyDiligenciasFilters } from "@/pages/datos/MonthlyDiligenciasFilters";
+import {
+  MUNICIPIO_MENSUAL_TODOS,
+  MonthlyDiligenciasFilters,
+} from "@/pages/datos/MonthlyDiligenciasFilters";
 import { ValidationStatsChart } from "@/pages/datos/ValidationStatsChart";
 import type { FormStatsMonthlyQuery, FormStatsQuery } from "@/services/api";
 
@@ -21,7 +24,7 @@ export const DatosPage = () => {
   const [fechaHasta, setFechaHasta] = useState("");
 
   const [anioMensual, setAnioMensual] = useState(() => new Date().getFullYear());
-  const [municipiosMensuales, setMunicipiosMensuales] = useState<string[]>([]);
+  const [municipioMensual, setMunicipioMensual] = useState(MUNICIPIO_MENSUAL_TODOS);
 
   const filters = useMemo((): FormStatsQuery => {
     const q: FormStatsQuery = {};
@@ -37,20 +40,24 @@ export const DatosPage = () => {
     return q;
   }, [municipio, fechaDesde, fechaHasta]);
 
-  const monthlyQuery = useMemo(
-    (): FormStatsMonthlyQuery => ({
-      anio: anioMensual,
-      municipios: municipiosMensuales,
-    }),
-    [anioMensual, municipiosMensuales],
-  );
-
   const { stats, loadState, error, reload } = useFormStats(filters, online);
   const {
     municipios: municipioOptions,
     loadState: municipiosLoadState,
     reload: reloadMunicipios,
   } = useFormStatsMunicipios(online);
+
+  const monthlyQuery = useMemo((): FormStatsMonthlyQuery => {
+    if (municipiosLoadState !== "ready" || municipioOptions.length === 0) {
+      return { anio: anioMensual, municipios: [] };
+    }
+    const municipios =
+      municipioMensual === MUNICIPIO_MENSUAL_TODOS
+        ? [...municipioOptions]
+        : [municipioMensual];
+    return { anio: anioMensual, municipios };
+  }, [anioMensual, municipioMensual, municipioOptions, municipiosLoadState]);
+
   const {
     data: monthlyData,
     anios: anioOptions,
@@ -81,13 +88,14 @@ export const DatosPage = () => {
   }, [aniosLoadState, anioOptions, anioMensual]);
 
   useEffect(() => {
-    if (municipiosLoadState !== "ready") {
-      return;
+    if (
+      municipioMensual !== MUNICIPIO_MENSUAL_TODOS &&
+      municipiosLoadState === "ready" &&
+      !municipioOptions.includes(municipioMensual)
+    ) {
+      setMunicipioMensual(MUNICIPIO_MENSUAL_TODOS);
     }
-    setMunicipiosMensuales((prev) =>
-      prev.filter((m) => municipioOptions.includes(m)),
-    );
-  }, [municipioOptions, municipiosLoadState]);
+  }, [municipioMensual, municipioOptions, municipiosLoadState]);
 
   const clearValidationFilters = () => {
     setMunicipio("");
@@ -97,13 +105,7 @@ export const DatosPage = () => {
 
   const clearMonthlyFilters = () => {
     setAnioMensual(anioOptions[0] ?? new Date().getFullYear());
-    setMunicipiosMensuales([]);
-  };
-
-  const toggleMunicipioMensual = (name: string) => {
-    setMunicipiosMensuales((prev) =>
-      prev.includes(name) ? prev.filter((m) => m !== name) : [...prev, name],
-    );
+    setMunicipioMensual(MUNICIPIO_MENSUAL_TODOS);
   };
 
   const refreshAll = () => {
@@ -218,15 +220,11 @@ export const DatosPage = () => {
               anio={anioMensual}
               anioOptions={anioOptions}
               aniosLoading={aniosLoadState === "loading"}
-              municipiosSeleccionados={municipiosMensuales}
+              municipio={municipioMensual}
               municipioOptions={municipioOptions}
               municipiosLoading={municipiosLoadState === "loading"}
               onChangeAnio={setAnioMensual}
-              onToggleMunicipio={toggleMunicipioMensual}
-              onSelectAllMunicipios={() =>
-                setMunicipiosMensuales([...municipioOptions])
-              }
-              onClearMunicipios={() => setMunicipiosMensuales([])}
+              onChangeMunicipio={setMunicipioMensual}
               onClear={clearMonthlyFilters}
               disabled={!online}
             />
@@ -252,11 +250,10 @@ export const DatosPage = () => {
           ) : null}
 
           {online &&
-          monthlyLoadState === "needs_municipios" &&
-          municipiosMensuales.length === 0 ? (
+          municipiosLoadState === "ready" &&
+          municipioOptions.length === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-600">
-              Elegí al menos un municipio en los filtros de arriba para generar el
-              gráfico.
+              No hay formularios con municipio registrado para mostrar este gráfico.
             </p>
           ) : null}
 
