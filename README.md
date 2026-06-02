@@ -51,7 +51,7 @@ La plantilla debe estar disponible en:
 - raíz del proyecto: `PlantillaSurvey.xlsx`
 - frontend público: `frontend/public/templates/PLANTILLA.xlsx`
 
-La descarga Excel escribe datos desde la fila 7 de la hoja `Plantilla`. La aplicación no implementa importación Excel.
+La descarga Excel escribe datos desde la fila 4 de la hoja `Plantilla`. La aplicación no implementa importación Excel.
 
 ## Configuración
 

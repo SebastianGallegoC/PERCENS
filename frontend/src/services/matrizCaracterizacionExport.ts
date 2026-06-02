@@ -9,6 +9,8 @@ import type { OfflineForm } from "@/services/db";
 
 export const MATRIZ_COLUMN_COUNT = 29;
 export const MATRIZ_SHEET_NAME = "Plantilla";
+/** Primera fila donde se escriben los datos del formulario (individual o masivo). */
+export const MATRIZ_FIRST_DATA_ROW = 4;
 /** Ruta pública de la plantilla Excel (archivo en `frontend/public/templates/`). */
 export const MATRIZ_TEMPLATE_PUBLIC_PATH = "/templates/PLANTILLA.xlsx";
 
@@ -304,7 +306,7 @@ export async function buildMatrizCaracterizacionWorkbook(
   if (wb) {
     const ws = wb.getWorksheet(MATRIZ_SHEET_NAME) ?? wb.worksheets[0];
     if (ws) {
-      writeRow(ws, 7, form);
+      writeRow(ws, MATRIZ_FIRST_DATA_ROW, form);
       return wb;
     }
   }
@@ -346,7 +348,7 @@ async function buildMatrizCaracterizacionWorkbookFromScratch(
     c.alignment = { wrapText: true, vertical: "top" };
   });
 
-  forms.forEach((form, i) => writeRow(ws, 7 + i, form));
+  forms.forEach((form, i) => writeRow(ws, MATRIZ_FIRST_DATA_ROW + i, form));
   ws.columns = MATRIZ_F_PSA_HEADERS.map((h) => ({
     width: Math.min(42, Math.max(14, Math.ceil(h.length * 0.55 + 6))),
   }));
@@ -360,7 +362,7 @@ export async function buildMatrizCaracterizacionWorkbookBulk(
   if (wb) {
     const ws = wb.getWorksheet(MATRIZ_SHEET_NAME) ?? wb.worksheets[0];
     if (ws) {
-      forms.forEach((form, i) => writeRow(ws, 7 + i, form));
+      forms.forEach((form, i) => writeRow(ws, MATRIZ_FIRST_DATA_ROW + i, form));
       return wb;
     }
   }

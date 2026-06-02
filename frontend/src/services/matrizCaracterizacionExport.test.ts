@@ -8,6 +8,7 @@ import {
   MATRIZ_COLUMN_COUNT,
   MATRIZ_F_PSA_HEADERS,
   MATRIZ_ROW_CELL_SOURCES,
+  MATRIZ_FIRST_DATA_ROW,
   MATRIZ_SHEET_NAME,
   buildMatrizCaracterizacionRow,
   buildMatrizCaracterizacionWorkbook,
@@ -98,24 +99,24 @@ describe("formatFechaMatriz", () => {
 });
 
 describe("workbooks Survey", () => {
-  it("construye workbook individual con datos en fila 7", async () => {
+  it("construye workbook individual con datos en la primera fila de datos", async () => {
     const f = minimalForm();
     f.datos_formulario = { nombres_apellidos_encuestado: "Ana", municipio: "Cali" };
     const wb = await buildMatrizCaracterizacionWorkbook(f);
     const ws = wb.getWorksheet(MATRIZ_SHEET_NAME) ?? wb.worksheets[0];
-    expect(ws?.getCell(7, 6).value).toBe("Cali");
-    expect(ws?.getCell(7, 10).value).toBe("Ana");
+    expect(ws?.getCell(MATRIZ_FIRST_DATA_ROW, 6).value).toBe("Cali");
+    expect(ws?.getCell(MATRIZ_FIRST_DATA_ROW, 10).value).toBe("Ana");
   });
 
-  it("construye workbook masivo agregando filas desde la 7", async () => {
+  it("construye workbook masivo agregando filas desde la primera fila de datos", async () => {
     const f1 = minimalForm();
     f1.datos_formulario = { nombres_apellidos_encuestado: "Ana Uno" };
     const f2 = minimalForm();
     f2.datos_formulario = { nombres_apellidos_encuestado: "Beto Dos" };
     const wb = await buildMatrizCaracterizacionWorkbookBulk([f1, f2]);
     const ws = wb.getWorksheet(MATRIZ_SHEET_NAME) ?? wb.worksheets[0];
-    expect(ws?.getCell(7, 10).value).toBe("Ana Uno");
-    expect(ws?.getCell(8, 10).value).toBe("Beto Dos");
+    expect(ws?.getCell(MATRIZ_FIRST_DATA_ROW, 10).value).toBe("Ana Uno");
+    expect(ws?.getCell(MATRIZ_FIRST_DATA_ROW + 1, 10).value).toBe("Beto Dos");
   });
 });
 
