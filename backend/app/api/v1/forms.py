@@ -1,7 +1,9 @@
 import logging
+from datetime import date
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response
+from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +18,8 @@ from app.repository.forms import (
 )
 from app.schemas.form_payload import FormPayload
 from app.schemas.form_read import FormListResponse, FormReadItem
+from app.schemas.form_stats import FormStatsQueryParams, FormStatsResponse
+from app.services.form_stats import get_validation_stats
 from app.services.forms import persist_form
 from app.services.storage import media_type_for_image, validated_photo_path
 
@@ -60,6 +64,43 @@ async def list_forms(
         _current_user,
     )
     return FormListResponse(items=items)
+
+
+@router.get("/stats", response_model=FormStatsResponse)
+async def form_validation_stats(
+    municipio: str | None = Query(default=None),
+    fecha_desde: date | None = Query(default=None),
+    fecha_hasta: date | None = Query(default=None),
+    session: AsyncSession = Depends(get_session),
+    _current_user: str = Depends(get_current_user),
+):
+    """Agregados de resultado_validacion con filtros opcionales por municipio y fecha_visita."""
+    try:
+        params = FormStatsQueryParams(
+            municipio=municipio,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+        )
+    except ValidationError as exc:
+        detail = "invalid_stats_query"
+        for err in exc.errors():
+            if err.get("type") == "value_error" and "fecha_desde_must_be_lte" in str(
+                err.get("msg", "")
+            ):
+                detail = "fecha_desde_must_be_lte_fecha_hasta"
+                break
+        raise HTTPException(status_code=422, detail=detail) from exc
+
+    try:
+        return await get_validation_stats(
+            session,
+            municipio=params.municipio,
+            fecha_desde=params.fecha_desde,
+            fecha_hasta=params.fecha_hasta,
+        )
+    except SQLAlchemyError:
+        logger.exception("form_validation_stats DB error user=%r", _current_user)
+        raise
 
 
 @router.get("/{form_id}", response_model=FormReadItem)

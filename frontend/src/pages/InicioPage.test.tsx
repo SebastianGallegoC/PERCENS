@@ -7,6 +7,12 @@ vi.mock("@/services/sync", () => ({
   countErrorForms: vi.fn().mockResolvedValue(3),
 }));
 
+const mockUseConnectivity = vi.fn(() => true);
+
+vi.mock("@/hooks/useConnectivityStatus", () => ({
+  useConnectivityStatus: () => mockUseConnectivity(),
+}));
+
 import { InicioPage } from "@/pages/InicioPage";
 
 async function renderInicio() {
@@ -23,6 +29,20 @@ async function renderInicio() {
 }
 
 describe("InicioPage", () => {
+  it("oculta enlace a Datos cuando está offline", async () => {
+    mockUseConnectivity.mockReturnValue(false);
+    await renderInicio();
+    expect(screen.queryByRole("link", { name: /Datos/i })).not.toBeInTheDocument();
+    mockUseConnectivity.mockReturnValue(true);
+  });
+
+  it("muestra enlace a Datos cuando está online", async () => {
+    mockUseConnectivity.mockReturnValue(true);
+    await renderInicio();
+    const datos = screen.getByRole("link", { name: /Datos/i });
+    expect(datos).toHaveAttribute("href", "/datos");
+  });
+
   it("renderiza enlaces a formulario, diligenciados, perfil y plantilla", async () => {
     await renderInicio();
 

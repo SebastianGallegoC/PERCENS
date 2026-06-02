@@ -25,6 +25,9 @@ const PerfilEncuestadorPage = lazy(() =>
     default: mod.PerfilEncuestadorPage,
   })),
 );
+const DatosPage = lazy(() =>
+  import("@/pages/DatosPage").then((mod) => ({ default: mod.DatosPage })),
+);
 function App() {
   return (
     <>
@@ -60,6 +63,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PerfilEncuestadorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/datos"
+            element={
+              <ProtectedRoute>
+                <DatosPage />
               </ProtectedRoute>
             }
           />

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ClipboardList, Download, FileSpreadsheet, UserRound } from "lucide-react";
+import { BarChart3, ClipboardList, Download, FileSpreadsheet, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { countErrorForms, countPendingForms } from "@/services/sync";
 
 export const InicioPage = () => {
+  const online = useConnectivityStatus();
   const [pendientes, setPendientes] = useState(0);
   const [erroresSync, setErroresSync] = useState(0);
 
@@ -59,7 +61,7 @@ export const InicioPage = () => {
         <section
           data-testid="inicio-acciones"
           aria-label="Acciones principales"
-          className="grid gap-2 sm:gap-4 md:grid-cols-3"
+          className="grid gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
         >
           <Link
             to="/formulario"
@@ -132,6 +134,31 @@ export const InicioPage = () => {
               </CardHeader>
             </Card>
           </Link>
+
+          {online ? (
+            <Link
+              to="/datos"
+              className="group block h-full rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring sm:rounded-2xl"
+            >
+              <Card className="h-full border-emerald-100 bg-white/90 shadow-[0_18px_40px_-35px_rgba(16,185,129,0.45)] transition group-hover:-translate-y-0.5">
+                <CardHeader className="gap-3">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 sm:h-11 sm:w-11">
+                      <BarChart3 className="h-5 w-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <CardTitle className="leading-snug text-emerald-900 sm:leading-normal">
+                        Datos
+                      </CardTitle>
+                      <CardDescription className="text-xs leading-snug text-slate-600 sm:text-sm sm:leading-normal">
+                        Gráficos de validación con filtros por municipio y fecha de visita.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+          ) : null}
         </section>
 
         <div className="mt-4">

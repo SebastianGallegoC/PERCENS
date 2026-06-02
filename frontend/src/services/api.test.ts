@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { deleteFormFromApi, listFormsFromApi, loginApi } from "./api";
+import {
+  deleteFormFromApi,
+  fetchFormStatsFromApi,
+  listFormsFromApi,
+  loginApi,
+} from "./api";
 
 describe("listFormsFromApi", () => {
   afterEach(() => {
@@ -41,6 +46,46 @@ describe("listFormsFromApi", () => {
       }),
     );
     await expect(listFormsFromApi()).rejects.toThrow("boom");
+  });
+});
+
+describe("fetchFormStatsFromApi", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("construye query string y devuelve estadísticas", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          total: 5,
+          cumple: 3,
+          no_cumple: 1,
+          sin_resultado: 1,
+          filtros_aplicados: {
+            municipio: "Cali",
+            fecha_desde: "2026-01-01",
+            fecha_hasta: null,
+          },
+        }),
+      }),
+    );
+    const stats = await fetchFormStatsFromApi({
+      municipio: "Cali",
+      fecha_desde: "2026-01-01",
+    });
+    expect(stats.total).toBe(5);
+    expect(stats.cumple).toBe(3);
+    const fetchMock = vi.mocked(fetch);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/forms/stats?"),
+      expect.any(Object),
+    );
+    const url = String(fetchMock.mock.calls[0]?.[0]);
+    expect(url).toContain("municipio=Cali");
+    expect(url).toContain("fecha_desde=2026-01-01");
   });
 });
 

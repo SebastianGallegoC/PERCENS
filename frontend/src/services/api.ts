@@ -185,6 +185,26 @@ export interface EncuestadorProfileLite {
   nombre: string;
 }
 
+export interface FormStatsFiltersApplied {
+  municipio: string | null;
+  fecha_desde: string | null;
+  fecha_hasta: string | null;
+}
+
+export interface FormStatsResponse {
+  total: number;
+  cumple: number;
+  no_cumple: number;
+  sin_resultado: number;
+  filtros_aplicados: FormStatsFiltersApplied;
+}
+
+export interface FormStatsQuery {
+  municipio?: string;
+  fecha_desde?: string;
+  fecha_hasta?: string;
+}
+
 /** Elimina el formulario en el servidor (requiere JWT). */
 export const deleteFormFromApi = async (formId: string): Promise<void> => {
   const url = `${API_BASE}/api/v1/forms/${encodeURIComponent(formId)}`;
@@ -233,6 +253,33 @@ export const listFormsFromApi = async (limit = 200): Promise<FormReadItem[]> => 
   });
   // #endregion
   return items;
+};
+
+/** Agregados de validación en servidor (`GET /api/v1/forms/stats`). */
+export const fetchFormStatsFromApi = async (
+  params: FormStatsQuery = {},
+): Promise<FormStatsResponse> => {
+  const search = new URLSearchParams();
+  if (params.municipio?.trim()) {
+    search.set("municipio", params.municipio.trim());
+  }
+  if (params.fecha_desde?.trim()) {
+    search.set("fecha_desde", params.fecha_desde.trim());
+  }
+  if (params.fecha_hasta?.trim()) {
+    search.set("fecha_hasta", params.fecha_hasta.trim());
+  }
+  const qs = search.toString();
+  const url = `${API_BASE}/api/v1/forms/stats${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url, {
+    headers: { ...authHeaders() },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(t || `forms_stats_${response.status}`);
+  }
+  return (await response.json()) as FormStatsResponse;
 };
 
 /** Devuelve detalle de un formulario por id (incluye fotos como rutas en `fotos`). */
