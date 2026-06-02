@@ -75,7 +75,6 @@ vi.mock("@/services/db", () => ({
 }));
 
 import {
-  listEnabledEncuestadorProfilesApi,
   listEncuestadorProfilesApi,
 } from "@/services/api";
 import {
@@ -84,6 +83,7 @@ import {
   encuestadorProfileHasServerForms,
   formatPerfilEncuestadorDisplay,
   listEnabledEncuestadorProfilesLocal,
+  listEncuestadorProfilesForFormSelect,
   resolveEncuestadorProfileNombre,
   syncEnabledEncuestadorProfiles,
 } from "@/services/encuestadorProfiles";
@@ -203,12 +203,12 @@ describe("encuestadorProfiles", () => {
     vi.clearAllMocks();
   });
 
-  it("resolveEncuestadorProfileNombre lee desde caché local", async () => {
+  it("resolveEncuestadorProfileNombre lee perfiles deshabilitados desde caché local", async () => {
     cacheStore.push({
       id: 7,
       username: "u1",
       nombre: "Carlos Ruiz",
-      habilitado: true,
+      habilitado: false,
       updated_at: "2026-01-01T00:00:00Z",
     });
     await expect(resolveEncuestadorProfileNombre("u1", 7)).resolves.toBe(
@@ -217,36 +217,155 @@ describe("encuestadorProfiles", () => {
     await expect(resolveEncuestadorProfileNombre("u1", 99)).resolves.toBeNull();
   });
 
-  it("syncEnabledEncuestadorProfiles persiste id y nombre por usuario", async () => {
-    vi.mocked(listEnabledEncuestadorProfilesApi).mockResolvedValue([
-      { id: 2, nombre: "María López" },
+  it("listEncuestadorProfilesForFormSelect incluye perfil asignado deshabilitado", async () => {
+    cacheStore.push(
+      {
+        id: 1,
+        username: "u1",
+        nombre: "Ana Pérez",
+        habilitado: true,
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: 7,
+        username: "u1",
+        nombre: "Carlos Ruiz",
+        habilitado: false,
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+    );
+
+    const options = await listEncuestadorProfilesForFormSelect("u1", 7);
+
+    expect(options).toEqual([
       { id: 1, nombre: "Ana Pérez" },
+      { id: 7, nombre: "Carlos Ruiz (deshabilitado)", assignedDisabled: true },
+    ]);
+  });
+
+  it("syncEnabledEncuestadorProfiles persiste habilitados y conserva deshabilitados en caché", async () => {
+    vi.mocked(listEncuestadorProfilesApi).mockResolvedValue([
+      {
+        id: 2,
+        username_owner: "encuestador1",
+        nombres_apellidos_encuestador: "María López",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "2",
+        telefono_encuestador: "301",
+        cargo_encuestador: "Enc",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "firma",
+        habilitado: false,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: 1,
+        username_owner: "encuestador1",
+        nombres_apellidos_encuestador: "Ana Pérez",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "1",
+        telefono_encuestador: "300",
+        cargo_encuestador: "Enc",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "firma",
+        habilitado: true,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
     ]);
 
     const items = await syncEnabledEncuestadorProfiles("encuestador1");
 
-    expect(items).toHaveLength(2);
+    expect(items).toEqual([{ id: 1, nombre: "Ana Pérez" }]);
     expect(cacheStore).toHaveLength(2);
-    expect(cacheStore.every((row) => row.username === "encuestador1")).toBe(true);
-    expect(cacheStore.find((row) => row.id === 1)?.nombre).toBe("Ana Pérez");
-    expect(cacheStore.find((row) => row.id === 2)?.nombre).toBe("María López");
+    expect(cacheStore.find((row) => row.id === 2)?.habilitado).toBe(false);
   });
 
-  it("re-sync reemplaza el catálogo del usuario", async () => {
-    vi.mocked(listEnabledEncuestadorProfilesApi).mockResolvedValueOnce([
-      { id: 1, nombre: "Ana Pérez" },
-      { id: 2, nombre: "María López" },
+  it("re-sync actualiza habilitados sin borrar perfiles deshabilitados de la caché", async () => {
+    vi.mocked(listEncuestadorProfilesApi).mockResolvedValueOnce([
+      {
+        id: 1,
+        username_owner: "user-a",
+        nombres_apellidos_encuestador: "Ana Pérez",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "1",
+        telefono_encuestador: "300",
+        cargo_encuestador: "Enc",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "firma",
+        habilitado: true,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: 2,
+        username_owner: "user-a",
+        nombres_apellidos_encuestador: "María López",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "2",
+        telefono_encuestador: "301",
+        cargo_encuestador: "Enc",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "firma",
+        habilitado: true,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
     ]);
     await syncEnabledEncuestadorProfiles("user-a");
 
-    vi.mocked(listEnabledEncuestadorProfilesApi).mockResolvedValueOnce([
-      { id: 3, nombre: "Carlos Ruiz" },
+    vi.mocked(listEncuestadorProfilesApi).mockResolvedValueOnce([
+      {
+        id: 3,
+        username_owner: "user-a",
+        nombres_apellidos_encuestador: "Carlos Ruiz",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "3",
+        telefono_encuestador: "302",
+        cargo_encuestador: "Enc",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "firma",
+        habilitado: true,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: 2,
+        username_owner: "user-a",
+        nombres_apellidos_encuestador: "María López",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "2",
+        telefono_encuestador: "301",
+        cargo_encuestador: "Enc",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "firma",
+        habilitado: false,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: 1,
+        username_owner: "user-a",
+        nombres_apellidos_encuestador: "Ana Pérez",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "1",
+        telefono_encuestador: "300",
+        cargo_encuestador: "Enc",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "firma",
+        habilitado: false,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
     ]);
     await syncEnabledEncuestadorProfiles("user-a");
 
     const local = await listEnabledEncuestadorProfilesLocal("user-a");
     expect(local).toEqual([{ id: 3, nombre: "Carlos Ruiz" }]);
-    expect(cacheStore.some((row) => row.id === 1 || row.id === 2)).toBe(false);
+    expect(cacheStore.some((row) => row.id === 1)).toBe(true);
+    expect(cacheStore.find((row) => row.id === 1)?.habilitado).toBe(false);
+    expect(cacheStore.find((row) => row.id === 2)?.habilitado).toBe(false);
   });
 
   it("listEnabledEncuestadorProfilesLocal ordena por nombre (es)", async () => {
@@ -283,13 +402,39 @@ describe("encuestadorProfiles", () => {
   });
 
   it("no mezcla perfiles de distintos usuarios", async () => {
-    vi.mocked(listEnabledEncuestadorProfilesApi).mockResolvedValueOnce([
-      { id: 1, nombre: "Usuario A" },
+    vi.mocked(listEncuestadorProfilesApi).mockResolvedValueOnce([
+      {
+        id: 1,
+        username_owner: "user-a",
+        nombres_apellidos_encuestador: "Usuario A",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "1",
+        telefono_encuestador: "300",
+        cargo_encuestador: "Enc",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "firma",
+        habilitado: true,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
     ]);
     await syncEnabledEncuestadorProfiles("user-a");
 
-    vi.mocked(listEnabledEncuestadorProfilesApi).mockResolvedValueOnce([
-      { id: 10, nombre: "Usuario B" },
+    vi.mocked(listEncuestadorProfilesApi).mockResolvedValueOnce([
+      {
+        id: 10,
+        username_owner: "user-b",
+        nombres_apellidos_encuestador: "Usuario B",
+        tipo_documento_encuestador: "CC",
+        numero_documento_encuestador: "10",
+        telefono_encuestador: "301",
+        cargo_encuestador: "Enc",
+        empresa_entidad_encuestador: "CENS",
+        firma_encuestador: "firma",
+        habilitado: true,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
     ]);
     await syncEnabledEncuestadorProfiles("user-b");
 

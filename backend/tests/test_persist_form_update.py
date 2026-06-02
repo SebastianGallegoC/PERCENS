@@ -25,6 +25,7 @@ def _six_photos_payload():
 async def test_persist_form_updates_datos_when_id_exists(monkeypatch):
     existing = SimpleNamespace(
         id_formulario="f-upd",
+        id_perfil_encuestador=None,
         fecha_hora=datetime(2026, 1, 1, tzinfo=timezone.utc),
         fecha_actualizacion=datetime(2026, 1, 1, tzinfo=timezone.utc),
         gps=None,
@@ -37,7 +38,7 @@ async def test_persist_form_updates_datos_when_id_exists(monkeypatch):
 
     monkeypatch.setattr("app.services.forms.get_form_by_id", fake_get)
     monkeypatch.setattr(
-        "app.services.forms.validate_profile_is_assignable",
+        "app.services.forms.validate_profile_for_form_persist",
         AsyncMock(return_value=(True, None)),
     )
     monkeypatch.setattr("app.services.forms.save_photos", lambda *_args, **_kwargs: [])
@@ -85,6 +86,7 @@ def test_resolve_fecha_actualizacion_no_baja_de_fecha_hora():
 async def test_persist_form_update_usa_fecha_actualizacion_explicita(monkeypatch):
     existing = SimpleNamespace(
         id_formulario="f-upd2",
+        id_perfil_encuestador=None,
         fecha_hora=datetime(2026, 1, 1, tzinfo=timezone.utc),
         fecha_actualizacion=datetime(2026, 1, 1, tzinfo=timezone.utc),
         gps=None,
@@ -97,7 +99,7 @@ async def test_persist_form_update_usa_fecha_actualizacion_explicita(monkeypatch
 
     monkeypatch.setattr("app.services.forms.get_form_by_id", fake_get)
     monkeypatch.setattr(
-        "app.services.forms.validate_profile_is_assignable",
+        "app.services.forms.validate_profile_for_form_persist",
         AsyncMock(return_value=(True, None)),
     )
     monkeypatch.setattr("app.services.forms.save_photos", lambda *_args, **_kwargs: [])
@@ -131,7 +133,7 @@ async def test_persist_form_creates_new_when_id_not_found(monkeypatch):
 
     monkeypatch.setattr("app.services.forms.get_form_by_id", fake_get)
     monkeypatch.setattr(
-        "app.services.forms.validate_profile_is_assignable",
+        "app.services.forms.validate_profile_for_form_persist",
         AsyncMock(return_value=(True, None)),
     )
     monkeypatch.setattr("app.services.forms.save_photos", lambda *_args, **_kwargs: [])
@@ -168,3 +170,44 @@ async def test_persist_form_creates_new_when_id_not_found(monkeypatch):
         "nombres_apellidos_encuestado": "Encuestado",
     }
     assert rec.fotos == []
+
+
+@pytest.mark.asyncio
+async def test_persist_form_update_retains_disabled_profile_link(monkeypatch):
+    existing = SimpleNamespace(
+        id_formulario="f-disabled-profile",
+        id_perfil_encuestador=7,
+        fecha_hora=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        fecha_actualizacion=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        gps=None,
+        datos_formulario={"nombres_apellidos_encuestado": "Ana"},
+        fotos=_six_photos_payload(),
+    )
+
+    async def fake_get(_session, form_id):
+        return existing if form_id == "f-disabled-profile" else None
+
+    validate_mock = AsyncMock(return_value=(True, None))
+
+    monkeypatch.setattr("app.services.forms.get_form_by_id", fake_get)
+    monkeypatch.setattr("app.services.forms.validate_profile_for_form_persist", validate_mock)
+    monkeypatch.setattr("app.services.forms.save_photos", lambda *_args, **_kwargs: [])
+
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+
+    payload = FormPayload(
+        id_formulario="f-disabled-profile",
+        id_perfil_encuestador=7,
+        fecha_hora="2026-01-01T00:00:00Z",
+        gps=GPSPayload(latitud=1.0, longitud=-2.0, precision=5.0),
+        datos_formulario={"nombres_apellidos_encuestado": "Ana actualizada"},
+        fotos=_six_photos_payload(),
+    )
+
+    await persist_form(session, payload, "tester")
+
+    assert existing.id_perfil_encuestador == 7
+    validate_mock.assert_awaited_once()
+    assert validate_mock.await_args.kwargs["existing_profile_id"] == 7

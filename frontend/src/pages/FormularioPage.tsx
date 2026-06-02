@@ -48,8 +48,9 @@ import { useFormDraftPersistence } from "@/pages/formulario/useFormDraftPersiste
 import { usePhotoCapture } from "@/pages/formulario/usePhotoCapture";
 import { FormClearModal } from "@/pages/formulario/FormClearModal";
 import {
-  listEnabledEncuestadorProfilesLocal,
+  listEncuestadorProfilesForFormSelect,
   syncEnabledEncuestadorProfiles,
+  type EncuestadorProfileSelectOption,
 } from "@/services/encuestadorProfiles";
 
 export const FormularioPage = () => {
@@ -123,7 +124,7 @@ export const FormularioPage = () => {
   );
   const [modalLimpiarAbierto, setModalLimpiarAbierto] = useState(false);
   const [encuestadorProfiles, setEncuestadorProfiles] = useState<
-    Array<{ id: number; nombre: string }>
+    EncuestadorProfileSelectOption[]
   >([]);
   const pickerInputRefs = useRegistroFotoPickerRefs();
 
@@ -158,6 +159,9 @@ export const FormularioPage = () => {
     [showCocinaOtro],
   );
 
+  const selectedEncuestadorProfileId =
+    Number.parseInt(formValues.id_perfil_encuestador || "0", 10) || null;
+
   useEffect(() => {
     if (!draftUserKey) {
       setEncuestadorProfiles([]);
@@ -165,16 +169,20 @@ export const FormularioPage = () => {
     }
     let cancelled = false;
     const loadProfiles = async () => {
-      const local = await listEnabledEncuestadorProfilesLocal(draftUserKey);
-      if (!cancelled) {
-        setEncuestadorProfiles(local);
-      }
+      const refreshOptions = async () => {
+        const options = await listEncuestadorProfilesForFormSelect(
+          draftUserKey,
+          selectedEncuestadorProfileId,
+        );
+        if (!cancelled) {
+          setEncuestadorProfiles(options);
+        }
+      };
+      await refreshOptions();
       if (isOnline) {
         try {
-          const synced = await syncEnabledEncuestadorProfiles(draftUserKey);
-          if (!cancelled) {
-            setEncuestadorProfiles(synced);
-          }
+          await syncEnabledEncuestadorProfiles(draftUserKey);
+          await refreshOptions();
         } catch {
           // En offline o error de red mantenemos el catálogo local.
         }
@@ -184,7 +192,7 @@ export const FormularioPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [draftUserKey, isOnline]);
+  }, [draftUserKey, isOnline, selectedEncuestadorProfileId]);
 
   const isEditMode = originalFechaHora != null;
 
@@ -617,7 +625,11 @@ export const FormularioPage = () => {
                     >
                       <option value="">Seleccioná un perfil habilitado</option>
                       {encuestadorProfiles.map((profile) => (
-                        <option key={profile.id} value={String(profile.id)}>
+                        <option
+                          key={profile.id}
+                          value={String(profile.id)}
+                          disabled={profile.assignedDisabled === true}
+                        >
                           {profile.nombre}
                         </option>
                       ))}

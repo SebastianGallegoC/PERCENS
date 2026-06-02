@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.form_record import FormRecord
 from app.repository.forms import create_form, get_form_by_id
 from app.schemas.form_payload import FormPayload
-from app.services.encuestador_profiles import validate_profile_is_assignable
+from app.services.encuestador_profiles import validate_profile_for_form_persist
 from app.services.storage import normalize_stored_foto_paths, safe_delete_stored_photos, save_photos
 
 
@@ -35,16 +35,18 @@ async def persist_form(
     fecha_hora = parse_fecha_hora_iso(payload.fecha_hora)
     fecha_act = resolve_fecha_actualizacion_dt(payload)
     gps_point = WKTElement(f"POINT({payload.gps.longitud} {payload.gps.latitud})", srid=4326)
+    existing = await get_form_by_id(session, payload.id_formulario)
+    existing_profile_id = existing.id_perfil_encuestador if existing else None
     if payload.id_perfil_encuestador is not None:
-        profile_ok, profile_error = await validate_profile_is_assignable(
+        profile_ok, profile_error = await validate_profile_for_form_persist(
             session,
             username,
             payload.id_perfil_encuestador,
+            existing_profile_id=existing_profile_id,
         )
         if not profile_ok:
             raise ValueError(profile_error or "encuestador_profile_invalid")
 
-    existing = await get_form_by_id(session, payload.id_formulario)
     if existing:
         # Reenvío con el mismo id (p. ej. edición desde otro dispositivo): actualizar datos en BD.
         old_paths = normalize_stored_foto_paths(existing.fotos)

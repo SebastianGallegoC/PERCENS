@@ -147,3 +147,21 @@ async def validate_profile_is_assignable(
     if not bool(profile.habilitado):
         return False, "encuestador_profile_disabled"
     return True, None
+
+
+async def validate_profile_for_form_persist(
+    session: AsyncSession,
+    username: str,
+    profile_id: int | None,
+    *,
+    existing_profile_id: int | None,
+) -> tuple[bool, str | None]:
+    """Permite conservar un perfil ya vinculado aunque esté deshabilitado; bloquea asignaciones nuevas."""
+    if profile_id is None:
+        return True, None
+    if existing_profile_id is not None and existing_profile_id == profile_id:
+        profile = await get_profile_for_user(session, profile_id, username)
+        if profile is None:
+            return False, "encuestador_profile_not_found"
+        return True, None
+    return await validate_profile_is_assignable(session, username, profile_id)

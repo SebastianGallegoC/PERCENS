@@ -128,24 +128,100 @@ export async function buildEncuestadorProfilesMapForExport(
   return map;
 }
 
-export async function syncEnabledEncuestadorProfiles(username: string): Promise<EncuestadorProfileLite[]> {
-  const apiItems = await listEnabledEncuestadorProfilesApi();
+export type EncuestadorProfileSelectOption = EncuestadorProfileLite & {
+  /** Perfil asignado al formulario pero deshabilitado (solo lectura en el select). */
+  assignedDisabled?: boolean;
+};
+
+function profileLiteFromCacheRow(row: EncuestadorProfileCacheRow): EncuestadorProfileLite {
+  return { id: row.id, nombre: row.nombre };
+}
+
+export async function syncEnabledEncuestadorProfiles(
+  username: string,
+): Promise<EncuestadorProfileLite[]> {
   const updatedAt = nowIso();
-  await db.transaction("rw", db.encuestadorProfilesCache, async () => {
-    await db.encuestadorProfilesCache.where("username").equals(username).delete();
-    if (apiItems.length === 0) {
-      return;
-    }
-    const rows: EncuestadorProfileCacheRow[] = apiItems.map((item) => ({
-      id: item.id,
-      username,
-      nombre: item.nombre,
-      habilitado: true,
-      updated_at: updatedAt,
-    }));
-    await db.encuestadorProfilesCache.bulkPut(rows);
-  });
-  return apiItems;
+  try {
+    const items = await listEncuestadorProfilesApi();
+    await persistEncuestadorProfilesExportCache(username, items);
+    return items
+      .filter((profile) => profile.habilitado)
+      .sort((a, b) =>
+        a.nombres_apellidos_encuestador.localeCompare(b.nombres_apellidos_encuestador, "es"),
+      )
+      .map((profile) => ({
+        id: profile.id,
+        nombre: profile.nombres_apellidos_encuestador,
+      }));
+  } catch {
+    const apiItems = await listEnabledEncuestadorProfilesApi();
+    const enabledIds = new Set(apiItems.map((item) => item.id));
+    await db.transaction("rw", db.encuestadorProfilesCache, async () => {
+      const existing = await db.encuestadorProfilesCache
+        .where("username")
+        .equals(username)
+        .toArray();
+      for (const row of existing) {
+        if (!enabledIds.has(row.id)) {
+          await db.encuestadorProfilesCache.put({
+            ...row,
+            habilitado: false,
+            updated_at: updatedAt,
+          });
+        }
+      }
+      if (apiItems.length > 0) {
+        const rows: EncuestadorProfileCacheRow[] = apiItems.map((item) => {
+          const previous = existing.find((row) => row.id === item.id);
+          return {
+            id: item.id,
+            username,
+            nombre: item.nombre,
+            tipo_documento_encuestador: previous?.tipo_documento_encuestador,
+            numero_documento_encuestador: previous?.numero_documento_encuestador,
+            telefono_encuestador: previous?.telefono_encuestador,
+            cargo_encuestador: previous?.cargo_encuestador,
+            empresa_entidad_encuestador: previous?.empresa_entidad_encuestador,
+            habilitado: true,
+            updated_at: updatedAt,
+          };
+        });
+        await db.encuestadorProfilesCache.bulkPut(rows);
+      }
+    });
+    return apiItems;
+  }
+}
+
+export async function listEncuestadorProfilesForFormSelect(
+  username: string,
+  selectedProfileId: number | null | undefined,
+): Promise<EncuestadorProfileSelectOption[]> {
+  const rows = await db.encuestadorProfilesCache.where("username").equals(username).toArray();
+  const enabled = rows
+    .filter((row) => row.habilitado)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+    .map((row) => profileLiteFromCacheRow(row));
+
+  if (
+    typeof selectedProfileId !== "number" ||
+    !Number.isFinite(selectedProfileId) ||
+    selectedProfileId <= 0 ||
+    enabled.some((profile) => profile.id === selectedProfileId)
+  ) {
+    return enabled;
+  }
+
+  const assigned = rows.find((row) => row.id === selectedProfileId);
+  const nombre = assigned?.nombre?.trim() || `Perfil ID ${selectedProfileId}`;
+  return [
+    ...enabled,
+    {
+      id: selectedProfileId,
+      nombre: `${nombre} (deshabilitado)`,
+      assignedDisabled: true,
+    },
+  ];
 }
 
 export async function listEnabledEncuestadorProfilesLocal(
@@ -180,8 +256,8 @@ export async function resolveEncuestadorProfileNombre(
   if (typeof profileId !== "number" || !Number.isFinite(profileId) || profileId <= 0) {
     return null;
   }
-  const local = await listEnabledEncuestadorProfilesLocal(username);
-  return local.find((p) => p.id === profileId)?.nombre ?? null;
+  const rows = await db.encuestadorProfilesCache.where("username").equals(username).toArray();
+  return rows.find((row) => row.id === profileId)?.nombre ?? null;
 }
 
 /** Formularios locales (cola, historial o precarga) que referencian el perfil. */
