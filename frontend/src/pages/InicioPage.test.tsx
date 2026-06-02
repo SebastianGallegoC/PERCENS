@@ -14,6 +14,7 @@ vi.mock("@/hooks/useConnectivityStatus", () => ({
 }));
 
 import { InicioPage } from "@/pages/InicioPage";
+import { MATRIZ_TEMPLATE_PUBLIC_PATH } from "@/services/matrizCaracterizacionExport";
 
 async function renderInicio() {
   const view = render(
@@ -56,7 +57,7 @@ describe("InicioPage", () => {
     expect(formulario).toHaveAttribute("href", "/formulario");
     expect(diligenciados).toHaveAttribute("href", "/formularios-diligenciados");
     expect(perfil).toHaveAttribute("href", "/perfil-encuestador");
-    expect(plantilla).toHaveAttribute("href", "/PLANTILLA.xlsx");
+    expect(plantilla).toHaveAttribute("href", MATRIZ_TEMPLATE_PUBLIC_PATH);
   });
 
   it("muestra contadores de pendientes y errores tras cargar", async () => {

@@ -3,7 +3,6 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -15,6 +14,7 @@ import {
   buildMonthlyChartRows,
   serieColor,
 } from "@/pages/datos/monthlyChartUtils";
+import { ResponsiveChartBox } from "@/pages/datos/ResponsiveChartBox";
 
 interface MonthlyDiligenciasChartProps {
   data: FormStatsMonthlyResponse;
@@ -33,14 +33,15 @@ export const MonthlyDiligenciasChart = ({ data }: MonthlyDiligenciasChartProps) 
   }
 
   return (
-    <div>
-      <div
-        className="h-72 w-full min-w-0 sm:h-80"
-        role="img"
+    <div className="min-w-0">
+      <ResponsiveChartBox
+        className="h-72 min-h-[18rem] sm:h-80"
         aria-label={`Formularios diligenciados por mes en ${data.anio}`}
       >
-        <ResponsiveContainer width="100%" height="100%">
+        {(size) => (
           <BarChart
+            width={size.width}
+            height={size.height}
             data={chartRows}
             margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
           >
@@ -74,8 +75,8 @@ export const MonthlyDiligenciasChart = ({ data }: MonthlyDiligenciasChartProps) 
               />
             ))}
           </BarChart>
-        </ResponsiveContainer>
-      </div>
+        )}
+      </ResponsiveChartBox>
       <p className="mt-3 text-center text-sm text-slate-700">
         Total en {data.anio}:{" "}
         <strong className="text-slate-900">{data.total}</strong> formularios

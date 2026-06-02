@@ -7,6 +7,7 @@ import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { countErrorForms, countPendingForms } from "@/services/sync";
+import { MATRIZ_TEMPLATE_PUBLIC_PATH } from "@/services/matrizCaracterizacionExport";
 
 export const InicioPage = () => {
   const online = useConnectivityStatus();
@@ -163,7 +164,7 @@ export const InicioPage = () => {
 
         <div className="mt-4">
           <a
-            href="/PLANTILLA.xlsx"
+            href={MATRIZ_TEMPLATE_PUBLIC_PATH}
             download
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50"
           >

@@ -3,11 +3,11 @@ import {
   Legend,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
 } from "recharts";
 
 import type { FormStatsResponse } from "@/services/api";
+import { ResponsiveChartBox } from "@/pages/datos/ResponsiveChartBox";
 
 const COLORS = {
   cumple: "#0d9488",
@@ -39,14 +39,13 @@ export const ValidationStatsChart = ({ stats }: ValidationStatsChartProps) => {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_minmax(12rem,16rem)] lg:items-center">
-      <div
-        className="h-64 w-full min-w-0"
-        role="img"
+    <div className="grid min-w-0 gap-4 lg:grid-cols-[1fr_minmax(12rem,16rem)] lg:items-center">
+      <ResponsiveChartBox
+        className="h-64 min-h-[16rem]"
         aria-label={`Gráfico de validación: ${stats.cumple} cumple, ${stats.no_cumple} no cumple, ${stats.sin_resultado} sin resultado`}
       >
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
+        {(size) => (
+          <PieChart width={size.width} height={size.height}>
             <Pie
               data={chartData}
               dataKey="value"
@@ -71,8 +70,8 @@ export const ValidationStatsChart = ({ stats }: ValidationStatsChartProps) => {
             />
             <Legend />
           </PieChart>
-        </ResponsiveContainer>
-      </div>
+        )}
+      </ResponsiveChartBox>
 
       <dl className="grid grid-cols-2 gap-3 text-sm lg:grid-cols-1">
         <div className="rounded-lg border border-teal-100 bg-teal-50/60 px-3 py-2">

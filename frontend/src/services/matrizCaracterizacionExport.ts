@@ -9,6 +9,8 @@ import type { OfflineForm } from "@/services/db";
 
 export const MATRIZ_COLUMN_COUNT = 29;
 export const MATRIZ_SHEET_NAME = "Plantilla";
+/** Ruta pública de la plantilla Excel (archivo en `frontend/public/templates/`). */
+export const MATRIZ_TEMPLATE_PUBLIC_PATH = "/templates/PLANTILLA.xlsx";
 
 export const MATRIZ_F_PSA_HEADERS: readonly string[] = [
   "LATITUD",
@@ -264,8 +266,8 @@ export function stripWorksheetDataValidations(ws: Worksheet): void {
 }
 
 async function loadTemplateWorkbook(): Promise<Workbook | null> {
-  const templateUrl = import.meta.env.VITE_MATRIZ_TEMPLATE_URL ??
-    "/PLANTILLA.xlsx";
+  const templateUrl =
+    import.meta.env.VITE_MATRIZ_TEMPLATE_URL ?? MATRIZ_TEMPLATE_PUBLIC_PATH;
   const resolvedTemplateUrl =
     templateUrl.startsWith("/") && typeof window !== "undefined"
       ? new URL(templateUrl, window.location.origin).toString()

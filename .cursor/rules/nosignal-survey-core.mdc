@@ -26,7 +26,7 @@ PWA offline-first para encuestas de visita con GPS, fotos, sincronización y exp
 - `id_formulario` es obligatorio internamente (IndexedDB, API, sync); no se muestra ni exporta a Excel.
 - Campo obligatorio para guardar/enviar: `nombres_apellidos_encuestado`.
 - Secciones en `frontend/src/config/formSections.ts`; selects en `formSelectOptions.ts`.
-- Excel: plantilla `PlantillaSurvey.xlsx` → `frontend/public/PLANTILLA.xlsx`; datos desde fila 7; **solo exportación**.
+- Excel: plantilla `PlantillaSurvey.xlsx` → `frontend/public/templates/PLANTILLA.xlsx`; datos desde fila 7; **solo exportación**.
 
 ## Verificación antes de terminar
 

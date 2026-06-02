@@ -49,7 +49,7 @@ El único campo obligatorio para guardar/enviar es `nombres_apellidos_encuestado
 La plantilla debe estar disponible en:
 
 - raíz del proyecto: `PlantillaSurvey.xlsx`
-- frontend público: `frontend/public/PLANTILLA.xlsx`
+- frontend público: `frontend/public/templates/PLANTILLA.xlsx`
 
 La descarga Excel escribe datos desde la fila 7 de la hoja `Plantilla`. La aplicación no implementa importación Excel.
 
