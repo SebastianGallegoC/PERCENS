@@ -29,6 +29,7 @@ vi.mock("@/lib/authStorage", () => ({
   ACCESS_TOKEN_KEY: "nosignal_access_token",
 }));
 
+import { getCurrentMonthIsoDateRange } from "@/pages/datos/datosDateDefaults";
 import { DatosPage } from "@/pages/DatosPage";
 
 const sampleStats = {
@@ -137,6 +138,26 @@ describe("DatosPage", () => {
       (o) => o.textContent,
     );
     expect(options).toContain("Sin asociar");
+  });
+
+  it("aplica rango del mes actual por defecto en validación", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    const { desde, hasta } = getCurrentMonthIsoDateRange();
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      expect(mockFetchFormStats).toHaveBeenCalled();
+      const lastCall = mockFetchFormStats.mock.calls.at(-1)?.[0];
+      expect(lastCall).toMatchObject({ fecha_desde: desde, fecha_hasta: hasta });
+    });
+    const desdeInput = screen.getByLabelText(/^Desde$/i) as HTMLInputElement;
+    const hastaInput = screen.getByLabelText(/^Hasta$/i) as HTMLInputElement;
+    expect(desdeInput.value).toBe(desde);
+    expect(hastaInput.value).toBe(hasta);
   });
 
   it("muestra gráfico cuando hay datos del servidor", async () => {

@@ -1,4 +1,5 @@
 import { municipioFilterLabel } from "@/constants/formStatsMunicipio";
+import { getCurrentMonthIsoDateRange } from "@/pages/datos/datosDateDefaults";
 
 interface DatosFiltersProps {
   municipio: string;
@@ -25,8 +26,11 @@ export const DatosFilters = ({
   onClear,
   disabled = false,
 }: DatosFiltersProps) => {
+  const defaultDates = getCurrentMonthIsoDateRange();
   const hasActive =
-    municipio !== "" || fechaDesde !== "" || fechaHasta !== "";
+    municipio !== "" ||
+    fechaDesde !== defaultDates.desde ||
+    fechaHasta !== defaultDates.hasta;
 
   const selectDisabled = disabled || municipiosLoading;
   const noMunicipios =

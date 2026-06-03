@@ -20,13 +20,23 @@ import {
 import { ValidationStatsChart } from "@/pages/datos/ValidationStatsChart";
 import type { FormStatsMonthlyQuery, FormStatsQuery } from "@/services/api";
 
+import {
+  getCurrentCalendarYear,
+  getCurrentMonthIsoDateRange,
+  getDefaultMonthlyAnio,
+} from "@/pages/datos/datosDateDefaults";
+
 export const DatosPage = () => {
   const online = useConnectivityStatus();
   const [municipio, setMunicipio] = useState("");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
+  const [fechaDesde, setFechaDesde] = useState(
+    () => getCurrentMonthIsoDateRange().desde,
+  );
+  const [fechaHasta, setFechaHasta] = useState(
+    () => getCurrentMonthIsoDateRange().hasta,
+  );
 
-  const [anioMensual, setAnioMensual] = useState(() => new Date().getFullYear());
+  const [anioMensual, setAnioMensual] = useState(() => getCurrentCalendarYear());
   const [municipioMensual, setMunicipioMensual] = useState(MUNICIPIO_MENSUAL_TODOS);
 
   const filters = useMemo((): FormStatsQuery => {
@@ -96,7 +106,7 @@ export const DatosPage = () => {
       return;
     }
     if (!anioOptions.includes(anioMensual)) {
-      setAnioMensual(anioOptions[0]);
+      setAnioMensual(getDefaultMonthlyAnio(anioOptions));
     }
   }, [aniosLoadState, anioOptions, anioMensual]);
 
@@ -111,13 +121,14 @@ export const DatosPage = () => {
   }, [municipioMensual, municipioOptions, municipiosLoadState]);
 
   const clearValidationFilters = () => {
+    const { desde, hasta } = getCurrentMonthIsoDateRange();
     setMunicipio("");
-    setFechaDesde("");
-    setFechaHasta("");
+    setFechaDesde(desde);
+    setFechaHasta(hasta);
   };
 
   const clearMonthlyFilters = () => {
-    setAnioMensual(anioOptions[0] ?? new Date().getFullYear());
+    setAnioMensual(getDefaultMonthlyAnio(anioOptions));
     setMunicipioMensual(MUNICIPIO_MENSUAL_TODOS);
   };
 

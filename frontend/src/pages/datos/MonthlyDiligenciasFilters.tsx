@@ -1,4 +1,5 @@
 import { municipioFilterLabel } from "@/constants/formStatsMunicipio";
+import { getDefaultMonthlyAnio } from "@/pages/datos/datosDateDefaults";
 
 /** Valor del dropdown cuando se muestran todos los municipios con datos. */
 export const MUNICIPIO_MENSUAL_TODOS = "";
@@ -29,7 +30,9 @@ export const MonthlyDiligenciasFilters = ({
   disabled = false,
 }: MonthlyDiligenciasFiltersProps) => {
   const filtersDisabled = disabled || municipiosLoading || aniosLoading;
-  const defaultAnio = anioOptions[0] ?? new Date().getFullYear();
+  const defaultAnio = getDefaultMonthlyAnio(
+    anioOptions.length > 0 ? anioOptions : [new Date().getFullYear()],
+  );
   const hasActive =
     municipio !== MUNICIPIO_MENSUAL_TODOS || anio !== defaultAnio;
 
