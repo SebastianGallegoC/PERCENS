@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { EncuestadorProfileDetailModal } from "@/components/encuestador/EncuestadorProfileDetailModal";
 import {
   EncuestadorProfileFormFields,
   type EncuestadorProfileFormState,
@@ -55,6 +56,9 @@ export const PerfilEncuestadorPage = () => {
     useState<EncuestadorProfileRead | null>(null);
   const [profileDeleteBlockedOpen, setProfileDeleteBlockedOpen] = useState(false);
   const [profileDeleteConfirming, setProfileDeleteConfirming] = useState(false);
+  const [profileViewing, setProfileViewing] = useState<EncuestadorProfileRead | null>(
+    null,
+  );
 
   const isEditMode = editingProfileId != null;
   const hasProfileEditChanges = useMemo(
@@ -248,14 +252,14 @@ export const PerfilEncuestadorPage = () => {
                       ? ` · ${profile.formularios_asociados} formulario(s) asociado(s)`
                       : null}
                   </p>
-                  {/^data:image\//i.test(profile.firma_encuestador) ? (
-                    <img
-                      src={profile.firma_encuestador}
-                      alt={`Firma de ${profile.nombres_apellidos_encuestador}`}
-                      className="mt-2 max-h-16 w-auto rounded border border-slate-200 bg-white object-contain"
-                    />
-                  ) : null}
                   <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setProfileViewing(profile)}
+                    >
+                      Ver perfil
+                    </Button>
                     <Button
                       type="button"
                       variant="outline"
@@ -285,6 +289,11 @@ export const PerfilEncuestadorPage = () => {
           </div>
         </div>
       </div>
+
+      <EncuestadorProfileDetailModal
+        profile={profileViewing}
+        onClose={() => setProfileViewing(null)}
+      />
 
       <SimpleDialogModal
         open={profilePendingDelete != null}
