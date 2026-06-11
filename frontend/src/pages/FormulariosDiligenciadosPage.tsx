@@ -341,7 +341,7 @@ export const FormulariosDiligenciadosPage = () => {
     }
 
     let visibleServerItems: FormReadItem[];
-    let totalServerItems = 0;
+    let totalServerItems: number;
     try {
       const response = await searchFormsFromApi({
         limit: SERVER_PAGE_SIZE,

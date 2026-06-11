@@ -92,6 +92,7 @@ vi.mock("@/services/db", () => ({
     formularios: {
       get: vi.fn().mockResolvedValue(undefined),
       delete: vi.fn().mockResolvedValue(undefined),
+      toArray: vi.fn().mockResolvedValue([]),
     },
     formulariosOcultos: {
       toArray: vi.fn().mockResolvedValue([]),

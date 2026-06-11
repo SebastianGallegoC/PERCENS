@@ -120,8 +120,8 @@ describe("SearchableSelect", () => {
       'input[role="combobox"]',
     ) as HTMLInputElement;
     const trap = container.querySelector(
-      'button[tabindex="-1"]',
-    ) as HTMLButtonElement;
+      'div[tabindex="-1"].sr-only',
+    ) as HTMLDivElement;
     const next = container.querySelector(
       '[data-testid="siguiente"]',
     ) as HTMLInputElement;
