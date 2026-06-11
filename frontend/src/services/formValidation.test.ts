@@ -129,4 +129,12 @@ describe("formValidation — campos Survey", () => {
     const { fieldIssues } = validateFormValuesWithFieldDetails(values);
     expect(fieldIssues.map((i) => i.code)).toContain("fecha_invalid");
   });
+
+  it("rechaza CUMPLE si distancia de seguridad es NO", () => {
+    const values = emptyValues();
+    values.cumple_distancia_seguridad = "NO";
+    values.resultado_validacion = "CUMPLE";
+    const { fieldIssues } = validateFormValuesWithFieldDetails(values);
+    expect(fieldIssues.map((i) => i.code)).toContain("distancia_seguridad_no_cumple");
+  });
 });

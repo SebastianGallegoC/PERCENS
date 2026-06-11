@@ -15,6 +15,7 @@ export const REQUIRED_FIELDS = [
   'telefono_encuestado',
   'edad_encuestado',
   'informacion_vivienda',
+  'cumple_distancia_seguridad',
   'cuenta_con_cocina',
   'cuenta_con_cocina_otro',
   'resultado_validacion',

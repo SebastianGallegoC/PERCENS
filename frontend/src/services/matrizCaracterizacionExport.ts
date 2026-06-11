@@ -12,7 +12,7 @@ import {
   type EncuestadorProfileExportFields,
 } from "@/services/encuestadorProfiles";
 
-export const MATRIZ_COLUMN_COUNT = 29;
+export const MATRIZ_COLUMN_COUNT = 30;
 export const MATRIZ_SHEET_NAME = "Plantilla";
 /** Primera fila donde se escriben los datos del formulario (individual o masivo). */
 export const MATRIZ_FIRST_DATA_ROW = 4;
@@ -35,6 +35,7 @@ export const MATRIZ_F_PSA_HEADERS: readonly string[] = [
   "NÚMERO TELEFÓNICO",
   "EDAD",
   "INFORMACIÓN DE LA VIVIENDA",
+  "¿CUMPLE CON LA DISTANCIA DE SEGURIDAD?",
   "¿CUENTA CON COCINA?",
   "RESULTADO DE VALIDACIÓN",
   "OBSERVACIONES",
@@ -78,6 +79,7 @@ export const MATRIZ_ROW_CELL_SOURCES: readonly MatrizRowCellSource[] = [
   { kind: "field", key: "telefono_encuestado" },
   { kind: "field", key: "edad_encuestado" },
   { kind: "field", key: "informacion_vivienda" },
+  { kind: "field", key: "cumple_distancia_seguridad" },
   { kind: "cocina" },
   { kind: "field", key: "resultado_validacion" },
   { kind: "field", key: "observaciones" },
@@ -366,10 +368,10 @@ async function buildMatrizCaracterizacionWorkbookFromScratch(
     [5, 5, "Fecha de la Visita"],
     [6, 8, "UBICACIÓN"],
     [9, 14, "ENCUESTADO"],
-    [15, 16, "VIVIENDA"],
-    [17, 18, "VALIDACIÓN"],
-    [19, 22, "DESPLAZAMIENTO"],
-    [23, 29, "ENCUESTADOR"],
+    [15, 17, "VIVIENDA"],
+    [18, 19, "VALIDACIÓN"],
+    [20, 23, "DESPLAZAMIENTO"],
+    [24, 30, "ENCUESTADOR"],
   ];
 
   for (const [from, to, label] of sections) {

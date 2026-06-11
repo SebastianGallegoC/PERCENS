@@ -13,6 +13,7 @@ import {
   coordDecimalInputHasComma,
   normalizeCoordNumericCell,
 } from "@/lib/coordNumericToken";
+import { resultadoValidacionPermitido } from "@/lib/distanciaSeguridadValidacion";
 import type { OfflineForm } from "@/services/db";
 import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/formFields";
 const TRI_ALLOWED = new Set(["Si", "No", "NR"]);
@@ -186,6 +187,20 @@ export const validateFormValuesWithFieldDetails = (
       field: "fecha_visita",
       code: "fecha_invalid",
       message: FECHA_FORMATO_MSG,
+    });
+  }
+
+  if (
+    !resultadoValidacionPermitido(
+      String(values.cumple_distancia_seguridad ?? ""),
+      String(values.resultado_validacion ?? ""),
+    )
+  ) {
+    fieldIssues.push({
+      field: "resultado_validacion",
+      code: "distancia_seguridad_no_cumple",
+      message:
+        "No puede cumplir: la vivienda no cumple la distancia de seguridad.",
     });
   }
 

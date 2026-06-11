@@ -22,6 +22,7 @@ const informacion_vivienda_options = [
   "SIN SERVICIO DE ENERGIA",
   "CON SERVICIO IRREGULAR DIRECTO",
   "CON SERVICIO IRREGULAR INDIRECTO",
+  "CON SERVICIO LEGAL",
 ];
 const cuenta_con_cocina_options = ["SI", "NO", "OTRO"];
 const resultado_validacion_options = ["CUMPLE", "NO CUMPLE"];
@@ -33,6 +34,7 @@ export const fieldSelectOptions: Partial<Record<FormFieldKey, SelectOption[]>> =
   tipo_documento_encuestado: buildOptions(tipo_documento_options),
   municipio: buildOptions(municipio_options),
   informacion_vivienda: buildOptions(informacion_vivienda_options),
+  cumple_distancia_seguridad: buildOptions(si_no_options),
   cuenta_con_cocina: buildOptions(cuenta_con_cocina_options),
   resultado_validacion: buildOptions(resultado_validacion_options),
   medio_transporte: buildOptions(medio_transporte_options),

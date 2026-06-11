@@ -28,13 +28,14 @@ const minimalForm = (): OfflineForm => ({
 });
 
 describe("matrizCaracterizacionExport — Survey", () => {
-  it("define 29 encabezados y 29 fuentes de celda", () => {
+  it("define 30 encabezados y 30 fuentes de celda", () => {
     expect(MATRIZ_SHEET_NAME).toBe("Plantilla");
     expect(MATRIZ_F_PSA_HEADERS.length).toBe(MATRIZ_COLUMN_COUNT);
     expect(MATRIZ_ROW_CELL_SOURCES.length).toBe(MATRIZ_COLUMN_COUNT);
     expect(MATRIZ_F_PSA_HEADERS[0]).toBe("LATITUD");
     expect(MATRIZ_F_PSA_HEADERS[9]).toBe("NOMBRES Y APELLIDOS");
-    expect(MATRIZ_F_PSA_HEADERS[28]).toBe("FIRMA");
+    expect(MATRIZ_F_PSA_HEADERS[15]).toBe("¿CUMPLE CON LA DISTANCIA DE SEGURIDAD?");
+    expect(MATRIZ_F_PSA_HEADERS[29]).toBe("FIRMA");
   });
 
   it("cada campo exportable aparece en la definición, salvo ID interno y auxiliar cocina", () => {
@@ -82,7 +83,7 @@ describe("matrizCaracterizacionExport — Survey", () => {
       cuenta_con_cocina: "OTRO - Cocina comunitaria",
       cuenta_con_cocina_otro: "",
     };
-    expect(buildMatrizCaracterizacionRow(f)[15]).toBe("Cocina comunitaria");
+    expect(buildMatrizCaracterizacionRow(f)[16]).toBe("Cocina comunitaria");
   });
 
   it("exporta datos del encuestador desde el perfil y deja la firma vacía", () => {
@@ -102,13 +103,13 @@ describe("matrizCaracterizacionExport — Survey", () => {
       ],
     ]);
     const row = buildMatrizCaracterizacionRow(f, profiles);
-    expect(row[22]).toBe("Ana Encuestadora");
-    expect(row[23]).toBe("CC");
-    expect(row[24]).toBe("123456");
-    expect(row[25]).toBe("3001112233");
-    expect(row[26]).toBe("Encuestador");
-    expect(row[27]).toBe("CENS");
-    expect(row[28]).toBe("");
+    expect(row[23]).toBe("Ana Encuestadora");
+    expect(row[24]).toBe("CC");
+    expect(row[25]).toBe("123456");
+    expect(row[26]).toBe("3001112233");
+    expect(row[27]).toBe("Encuestador");
+    expect(row[28]).toBe("CENS");
+    expect(row[29]).toBe("");
   });
 });
 

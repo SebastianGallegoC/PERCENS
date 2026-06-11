@@ -7,6 +7,7 @@ describe("formFieldMeta — Survey", () => {
     expect(inputKindForField("autoriza_tratamiento_datos")).toBe("select");
     expect(inputKindForField("datos_encuestado")).toBe("select");
     expect(inputKindForField("resultado_validacion")).toBe("select");
+    expect(inputKindForField("cumple_distancia_seguridad")).toBe("select");
   });
 
   it("configura fecha y numéricos", () => {
@@ -24,5 +25,8 @@ describe("formFieldMeta — Survey", () => {
   it("mantiene etiquetas específicas de columnas duplicadas", () => {
     expect(fieldLabel("nombres_apellidos_encuestado")).toBe("Nombres y apellidos");
     expect(fieldLabel("id_perfil_encuestador")).toBe("Perfil de encuestador");
+    expect(fieldLabel("cumple_distancia_seguridad")).toBe(
+      "¿Cumple con la distancia de seguridad?",
+    );
   });
 });

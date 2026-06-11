@@ -46,6 +46,16 @@ def _normalize_fecha_visita(raw: object) -> str | None:
         return None
 
 
+def _distancia_seguridad_impide_cumplir(raw: object) -> bool:
+    return isinstance(raw, str) and raw.strip().upper() == "NO"
+
+
+def _apply_distancia_seguridad_rule(normalized: dict[str, object]) -> None:
+    if not _distancia_seguridad_impide_cumplir(normalized.get("cumple_distancia_seguridad")):
+        return
+    normalized["resultado_validacion"] = "NO CUMPLE"
+
+
 def normalize_datos_formulario_for_persist(
     datos_formulario: dict[str, object],
 ) -> dict[str, object]:
@@ -53,6 +63,7 @@ def normalize_datos_formulario_for_persist(
     normalized_fecha_visita = _normalize_fecha_visita(normalized.get("fecha_visita"))
     if normalized_fecha_visita is not None:
         normalized["fecha_visita"] = normalized_fecha_visita
+    _apply_distancia_seguridad_rule(normalized)
     return normalized
 
 

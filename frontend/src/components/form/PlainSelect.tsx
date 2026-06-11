@@ -19,6 +19,8 @@ type PlainSelectProps = {
   options: SelectOption[];
   error?: string;
   label: string;
+  disabled?: boolean;
+  helperText?: string;
 };
 
 export const PlainSelect = ({
@@ -27,6 +29,8 @@ export const PlainSelect = ({
   options,
   error,
   label,
+  disabled = false,
+  helperText,
 }: PlainSelectProps) => {
   const allowedValues = new Set(options.map((option) => option.value));
 
@@ -49,7 +53,8 @@ export const PlainSelect = ({
           <select
             {...field}
             value={String(field.value ?? "")}
-            className={`${selectClass} ${error ? selectErrorClass : ""}`.trim()}
+            disabled={disabled}
+            className={`${selectClass} ${error ? selectErrorClass : ""} ${disabled ? "cursor-not-allowed bg-slate-50 text-slate-500" : ""}`.trim()}
             style={{ backgroundImage: CHEVRON_BG }}
           >
             {options.map((option) => (
@@ -61,6 +66,9 @@ export const PlainSelect = ({
               </option>
             ))}
           </select>
+          {helperText ? (
+            <span className="mt-1 text-xs text-slate-500">{helperText}</span>
+          ) : null}
           {error ? (
             <span className="mt-1 text-xs text-red-600">{error}</span>
           ) : null}

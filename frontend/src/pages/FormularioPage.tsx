@@ -44,6 +44,11 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { REQUIRED_FIELDS, type FormFieldKey, type FormValues } from "@/types/formFields";
 import { buildExternalMapUrl, buildMapUrl } from "@/pages/formulario/mapUtils";
 import { applyCuentaConCocinaToFormValues, isCuentaConCocinaOtroSelection } from "@/lib/cuentaConCocina";
+import {
+  distanciaSeguridadImpideCumplir,
+  RESULTADO_NO_CUMPLE,
+} from "@/lib/distanciaSeguridadValidacion";
+import { fieldSelectOptions } from "@/config/formSelectOptions";
 import { normalizeFotosToSlots } from "@/lib/registroFotoUtils";
 import { useGpsFormFields } from "@/pages/formulario/useGpsFormFields";
 import { useFormDraftPersistence } from "@/pages/formulario/useFormDraftPersistence";
@@ -152,12 +157,38 @@ export const FormularioPage = () => {
 
   const formValues = watch();
   const showCocinaOtro = isCuentaConCocinaOtroSelection(formValues.cuenta_con_cocina);
+  const distanciaSeguridadBloqueaCumplir = distanciaSeguridadImpideCumplir(
+    formValues.cumple_distancia_seguridad,
+  );
 
   useEffect(() => {
     if (!showCocinaOtro && formValues.cuenta_con_cocina_otro.trim() !== "") {
       setValue("cuenta_con_cocina_otro", "");
     }
   }, [showCocinaOtro, formValues.cuenta_con_cocina_otro, setValue]);
+
+  useEffect(() => {
+    if (
+      distanciaSeguridadBloqueaCumplir &&
+      formValues.resultado_validacion.trim().toUpperCase() !== RESULTADO_NO_CUMPLE
+    ) {
+      setValue("resultado_validacion", RESULTADO_NO_CUMPLE);
+    }
+  }, [
+    distanciaSeguridadBloqueaCumplir,
+    formValues.resultado_validacion,
+    setValue,
+  ]);
+
+  const resultadoValidacionSelectOptions = useMemo(() => {
+    const base = fieldSelectOptions.resultado_validacion ?? [{ value: "", label: "" }];
+    if (!distanciaSeguridadBloqueaCumplir) {
+      return base;
+    }
+    return base.filter(
+      (option) => option.value === "" || option.value === RESULTADO_NO_CUMPLE,
+    );
+  }, [distanciaSeguridadBloqueaCumplir]);
 
   const visibleSectionFields = useCallback(
     (fields: readonly FormFieldKey[]) =>
@@ -685,6 +716,19 @@ export const FormularioPage = () => {
                         control={control}
                         error={errors[field]?.message as string | undefined}
                         editableGpsFields={modoCoordenadas === "manual"}
+                        selectDisabled={
+                          field === "resultado_validacion" && distanciaSeguridadBloqueaCumplir
+                        }
+                        selectHelperText={
+                          field === "resultado_validacion" && distanciaSeguridadBloqueaCumplir
+                            ? "No puede cumplir: no cumple la distancia de seguridad."
+                            : undefined
+                        }
+                        selectOptions={
+                          field === "resultado_validacion"
+                            ? resultadoValidacionSelectOptions
+                            : undefined
+                        }
                       />
                     ))}
                   </div>

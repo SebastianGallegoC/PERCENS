@@ -44,6 +44,7 @@ export const FORM_SECTIONS: readonly FormSectionDef[] = [
     title: 'Vivienda',
     fields: [
       'informacion_vivienda',
+      'cumple_distancia_seguridad',
       'cuenta_con_cocina',
       'cuenta_con_cocina_otro',
     ],

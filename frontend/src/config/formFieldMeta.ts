@@ -68,6 +68,7 @@ export const fieldLabel = (field: FormFieldKey): string =>
       telefono_encuestado: 'Número telefónico',
       edad_encuestado: 'Edad',
       informacion_vivienda: 'Información de la vivienda',
+      cumple_distancia_seguridad: '¿Cumple con la distancia de seguridad?',
       cuenta_con_cocina: '¿Cuenta con cocina?',
       cuenta_con_cocina_otro: 'Especifique cuál',
       resultado_validacion: 'Resultado de validación',

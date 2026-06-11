@@ -19,6 +19,7 @@ import {
   validateOfflineFormPayload,
 } from "@/services/formValidation";
 import { formatCuentaConCocinaForStorage } from "@/lib/cuentaConCocina";
+import { applyDistanciaSeguridadRule } from "@/lib/distanciaSeguridadValidacion";
 import {
   formatCoordForDatosFormulario,
   normalizeCoordNumericCell,
@@ -87,6 +88,8 @@ export const buildDatosFormulario = (
   );
   datos_formulario.cuenta_con_cocina = cocina.cuenta_con_cocina;
   datos_formulario.cuenta_con_cocina_otro = cocina.cuenta_con_cocina_otro;
+  const resultado = applyDistanciaSeguridadRule(values);
+  datos_formulario.resultado_validacion = resultado.resultado_validacion;
   return datos_formulario;
 };
 

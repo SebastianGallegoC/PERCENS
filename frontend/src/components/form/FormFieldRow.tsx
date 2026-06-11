@@ -130,6 +130,9 @@ interface FormFieldRowProps {
   control: Control<FormValues>;
   error?: string;
   editableGpsFields?: boolean;
+  selectDisabled?: boolean;
+  selectHelperText?: string;
+  selectOptions?: SelectOption[];
 }
 
 export const FormFieldRow = ({
@@ -138,6 +141,9 @@ export const FormFieldRow = ({
   control,
   error,
   editableGpsFields = false,
+  selectDisabled = false,
+  selectHelperText,
+  selectOptions,
 }: FormFieldRowProps) => {
   const kind = inputKindForField(name);
   const label = fieldLabel(name);
@@ -251,7 +257,7 @@ export const FormFieldRow = ({
   }
 
   if (kind === "select") {
-    const options = fieldSelectOptions[name] ?? SELECT_FALLBACK;
+    const options = selectOptions ?? fieldSelectOptions[name] ?? SELECT_FALLBACK;
     if (isSearchableSelectField(name)) {
       return (
         <SearchableSelect
@@ -270,6 +276,8 @@ export const FormFieldRow = ({
         options={options}
         label={label}
         error={error}
+        disabled={selectDisabled}
+        helperText={selectHelperText}
       />
     );
   }

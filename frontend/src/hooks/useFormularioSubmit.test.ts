@@ -36,6 +36,16 @@ describe("useFormularioSubmit helpers", () => {
     expect(Object.keys(data)).toHaveLength(REQUIRED_FIELDS.length - 1);
   });
 
+  it("buildDatosFormulario fuerza NO CUMPLE si distancia de seguridad es NO", () => {
+    const values = buildEmptyValues();
+    values.cumple_distancia_seguridad = "NO";
+    values.resultado_validacion = "CUMPLE";
+
+    const data = buildDatosFormulario(values, REQUIRED_FIELDS);
+
+    expect(data.resultado_validacion).toBe("NO CUMPLE");
+  });
+
   it("buildDatosFormulario combina OTRO con texto en cuenta_con_cocina", () => {
     const values = buildEmptyValues();
     values.cuenta_con_cocina = "OTRO";

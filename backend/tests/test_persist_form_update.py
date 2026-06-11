@@ -200,6 +200,26 @@ def test_normalize_datos_formulario_for_persist():
     assert normalized["fecha_visita"] == "2026-06-03"
 
 
+def test_normalize_datos_formulario_fuerza_no_cumple_si_distancia_seguridad_no():
+    normalized = normalize_datos_formulario_for_persist(
+        {
+            "cumple_distancia_seguridad": "NO",
+            "resultado_validacion": "",
+        }
+    )
+    assert normalized["resultado_validacion"] == "NO CUMPLE"
+
+
+def test_normalize_datos_formulario_corrige_cumple_con_distancia_seguridad_no():
+    normalized = normalize_datos_formulario_for_persist(
+        {
+            "cumple_distancia_seguridad": "NO",
+            "resultado_validacion": "CUMPLE",
+        }
+    )
+    assert normalized["resultado_validacion"] == "NO CUMPLE"
+
+
 @pytest.mark.asyncio
 async def test_persist_form_update_retains_disabled_profile_link(monkeypatch):
     existing = SimpleNamespace(
