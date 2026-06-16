@@ -35,6 +35,8 @@ class FormSummaryItem(BaseModel):
     municipio: str = ""
     fecha_visita: str = ""
     resultado_validacion: str = ""
+    missing_field_count: int = 0
+    missing_photo_count: int = 0
 
 
 class FormSearchResponse(BaseModel):

@@ -116,6 +116,8 @@ describe("searchFormsFromApi", () => {
               municipio: "Popayan",
               fecha_visita: "2026-06-01",
               resultado_validacion: "CUMPLE",
+              missing_field_count: 3,
+              missing_photo_count: 1,
             },
           ],
           total: 1,
@@ -134,6 +136,8 @@ describe("searchFormsFromApi", () => {
     });
     expect(result.total).toBe(1);
     expect(result.items[0]?.id_formulario).toBe("f-11");
+    expect(result.items[0]?.missing_field_count).toBe(3);
+    expect(result.items[0]?.missing_photo_count).toBe(1);
     const url = String(vi.mocked(fetch).mock.calls[0]?.[0]);
     expect(url).toContain("/api/v1/forms/search?");
     expect(url).toContain("limit=20");

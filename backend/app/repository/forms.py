@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.schema_flags import forms_has_fecha_actualizacion
 from app.models.form_record import FormRecord
 from app.schemas.form_read import FormReadItem, FormSummaryItem
+from app.services.form_completeness import compute_missing_pending_summary
 from app.services.storage import (
     fotos_json_for_api_list,
     normalize_stored_foto_paths,
@@ -165,6 +166,8 @@ async def search_forms_summary(
         FormRecord.id_perfil_encuestador,
         FormRecord.fecha_hora,
         FormRecord.fecha_actualizacion,
+        FormRecord.datos_formulario,
+        FormRecord.fotos,
         cast(ST_AsGeoJSON(FormRecord.gps), String).label("geojson"),
         nombre_col.label("nombres_apellidos_encuestado"),
         municipio_col.label("municipio"),
@@ -192,10 +195,19 @@ async def search_forms_summary(
         fa = row.get("fecha_actualizacion") or fh
         fecha_iso = fh.isoformat() if hasattr(fh, "isoformat") else str(fh)
         fecha_actualizacion_iso = fa.isoformat() if hasattr(fa, "isoformat") else str(fa)
+        datos = row["datos_formulario"] if isinstance(row["datos_formulario"], dict) else {}
+        id_perfil = row.get("id_perfil_encuestador")
+        missing_fields, missing_photos = compute_missing_pending_summary(
+            datos,
+            latitud=lat,
+            longitud=lon,
+            id_perfil_encuestador=id_perfil,
+            fotos_raw=row.get("fotos"),
+        )
         items.append(
             FormSummaryItem(
                 id_formulario=row["id_formulario"],
-                id_perfil_encuestador=row.get("id_perfil_encuestador"),
+                id_perfil_encuestador=id_perfil,
                 fecha_hora=fecha_iso,
                 fecha_actualizacion=fecha_actualizacion_iso,
                 latitud=lat,
@@ -205,6 +217,8 @@ async def search_forms_summary(
                 municipio=(row.get("municipio") or "").strip(),
                 fecha_visita=(row.get("fecha_visita") or "").strip(),
                 resultado_validacion=(row.get("resultado_validacion") or "").strip(),
+                missing_field_count=missing_fields,
+                missing_photo_count=missing_photos,
             )
         )
     return items, total

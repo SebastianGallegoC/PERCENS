@@ -9,6 +9,11 @@ import {
 import type { FormReadItem } from "@/services/api";
 import type { HistorialForm, OfflineForm, PrecargaForm } from "@/services/db";
 import { REQUIRED_FIELDS, type FormValues } from "@/types/formFields";
+import {
+  getMissingBadgeFromServerCounts,
+  getMissingBadgeFromSnapshot,
+  hasServerCompletenessCounts,
+} from "@/lib/formCompleteness";
 
 export type DisplayRow = {
   id_formulario: string;
@@ -470,6 +475,51 @@ function coalesceFotosForListPreview(
   return best;
 }
 
+/** Elige la lista de fotos con más entradas reconocibles (evita degradar el preview). */
+export function pickRicherFotoList(
+  a: FormularioSnapshot["fotos"] | undefined,
+  b: FormularioSnapshot["fotos"] | undefined,
+): FormularioSnapshot["fotos"] {
+  const score = (fotos: FormularioSnapshot["fotos"] | undefined): number =>
+    fotos?.filter((foto) => listPreviewFotoHasContent(foto)).length ?? 0;
+  const scoreA = score(a);
+  const scoreB = score(b);
+  if (scoreB > scoreA) {
+    return b ?? [];
+  }
+  return a ?? [];
+}
+
+/** true si hay al menos una fuente confiable de metadatos/fotos para evaluar slots. */
+export function isPhotoCompletenessKnown(
+  row: DisplayRow,
+  opts?: {
+    precarga?: PrecargaForm | null;
+    queued?: OfflineForm | null;
+    serverPreview?: FormularioSnapshot | null;
+  },
+): boolean {
+  if (opts?.queued) {
+    return true;
+  }
+  if (opts?.serverPreview) {
+    return true;
+  }
+  if ((row.historial?.fotos ?? []).some((foto) => listPreviewFotoHasContent(foto))) {
+    return true;
+  }
+  if ((opts?.precarga?.fotos ?? []).some((foto) => listPreviewFotoHasContent(foto))) {
+    return true;
+  }
+  if ((row.precargaSolo?.fotos ?? []).some((foto) => listPreviewFotoHasContent(foto))) {
+    return true;
+  }
+  if (row.server?.fotos?.length) {
+    return true;
+  }
+  return false;
+}
+
 export function buildListPreviewSnapshot(
   row: DisplayRow,
   opts?: {
@@ -519,6 +569,76 @@ export function buildListPreviewSnapshot(
     ...snapshot,
     fotos: coalesceFotosForListPreview(row, opts),
   };
+}
+
+function historialHasLocalDatos(historial: HistorialForm | undefined): boolean {
+  const datos = historial?.datos_formulario;
+  return datos != null && Object.keys(datos).length > 0;
+}
+
+function precargaHasLocalDatos(precarga: PrecargaForm | null | undefined): boolean {
+  const datos = precarga?.datos_formulario;
+  return datos != null && Object.keys(datos).length > 0;
+}
+
+/**
+ * true cuando los datos locales (cola, historial pendiente o precarga offline)
+ * deben prevalecer sobre los contadores del servidor en el badge del listado.
+ */
+export function shouldPreferLocalCompleteness(
+  row: DisplayRow,
+  opts?: {
+    precarga?: PrecargaForm | null;
+    queued?: OfflineForm | null;
+  },
+): boolean {
+  if (opts?.queued) {
+    return true;
+  }
+  const estado = row.historial?.estado;
+  if (
+    historialHasLocalDatos(row.historial) &&
+    (estado === "PENDIENTE" || estado === "ERROR" || !row.onServer)
+  ) {
+    return true;
+  }
+  const precarga = opts?.precarga ?? row.precargaSolo ?? null;
+  if (!row.onServer && precargaHasLocalDatos(precarga)) {
+    return true;
+  }
+  return false;
+}
+
+/** Badge del listado: servidor (search) si aplica; si no, cálculo local sobre snapshot. */
+export function getMissingBadgeForListRow(
+  row: DisplayRow,
+  opts?: {
+    precarga?: PrecargaForm | null;
+    queued?: OfflineForm | null;
+  },
+): string | null {
+  const precarga = opts?.precarga ?? row.precargaSolo ?? null;
+  const queued = opts?.queued ?? null;
+
+  if (
+    !shouldPreferLocalCompleteness(row, { precarga, queued }) &&
+    row.onServer &&
+    hasServerCompletenessCounts(row.server)
+  ) {
+    return getMissingBadgeFromServerCounts(row.server);
+  }
+
+  const snapshot = buildListPreviewSnapshot(row, {
+    precarga,
+    queued,
+    serverPreview: null,
+  });
+  if (!snapshot) {
+    return null;
+  }
+  return getMissingBadgeFromSnapshot(snapshot, {
+    includePhotos: isPhotoCompletenessKnown(row, { precarga, queued, serverPreview: null }),
+  });
 }
 
 export function precargaToSnapshot(precarga: {

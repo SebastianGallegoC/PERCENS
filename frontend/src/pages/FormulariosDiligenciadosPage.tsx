@@ -38,11 +38,11 @@ import {
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
 import {
   buildFormValuesFromSnapshot,
-  buildListPreviewSnapshot,
   coalesceIdPerfilEncuestador,
   collectMunicipiosFromRows,
   getBeneficiarioDisplayName,
   getFechaReferenciaEnvio,
+  getMissingBadgeForListRow,
   getMunicipioDisplayValue,
   mapServerFotos,
   mergeFormsWithPrecargas,
@@ -55,11 +55,7 @@ import {
   precargaToSnapshot,
   type DisplayRow,
 } from "@/services/formHistory";
-import {
-  countMissingPhotoSlots,
-  formatMissingPendingListBadge,
-  getMissingPendingSummary,
-} from "@/lib/formCompleteness";
+import { getMissingBadgeFromSnapshot } from "@/lib/formCompleteness";
 import { enrichFormularioSnapshotEncuestador } from "@/services/encuestadorProfiles";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -97,6 +93,8 @@ function summaryToServerListItem(summary: FormSummaryItem): FormReadItem {
       resultado_validacion: summary.resultado_validacion,
     },
     fotos: [],
+    missing_field_count: summary.missing_field_count,
+    missing_photo_count: summary.missing_photo_count,
   };
 }
 
@@ -133,14 +131,10 @@ export const FormulariosDiligenciadosPage = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const serverItemsRef = useRef<FormReadItem[]>([]);
   const serverOffsetRef = useRef(0);
-  const serverPreviewFetchRef = useRef(new Set<string>());
   const [precargas, setPrecargas] = useState<PrecargaForm[]>([]);
   const [queuedById, setQueuedById] = useState<Map<string, OfflineForm>>(
     () => new Map(),
   );
-  const [serverPreviewById, setServerPreviewById] = useState<
-    Map<string, FormularioSnapshot>
-  >(() => new Map());
   const [precargaLoadingId, setPrecargaLoadingId] = useState<string | null>(
     null,
   );
@@ -266,23 +260,16 @@ export const FormulariosDiligenciadosPage = () => {
   const missingBadgeById = useMemo(() => {
     const labels = new Map<string, string>();
     for (const row of rowsFiltrados) {
-      const snapshot = buildListPreviewSnapshot(row, {
+      const label = getMissingBadgeForListRow(row, {
         precarga: precargaMap.get(row.id_formulario) ?? null,
         queued: queuedById.get(row.id_formulario) ?? null,
-        serverPreview: serverPreviewById.get(row.id_formulario) ?? null,
       });
-      if (!snapshot) {
-        continue;
-      }
-      const label = formatMissingPendingListBadge(
-        getMissingPendingSummary(snapshot),
-      );
       if (label) {
         labels.set(row.id_formulario, label);
       }
     }
     return labels;
-  }, [rowsFiltrados, precargaMap, queuedById, serverPreviewById]);
+  }, [rowsFiltrados, precargaMap, queuedById]);
 
   /** Total en servidor; `sin_red` = sin Wi‑Fi/datos: no se muestra ningún mensaje en UI. */
   const contadorServidor = useMemo(() => {
@@ -465,74 +452,6 @@ export const FormulariosDiligenciadosPage = () => {
     void loadList();
   }, [loadList]);
 
-  useEffect(() => {
-    if (!online) {
-      return;
-    }
-    let cancelled = false;
-    const pending = rowsFiltrados.filter((row) => {
-      if (!row.onServer) {
-        return false;
-      }
-      if (serverPreviewFetchRef.current.has(row.id_formulario)) {
-        return false;
-      }
-      if (serverPreviewById.has(row.id_formulario)) {
-        return false;
-      }
-      if (queuedById.has(row.id_formulario)) {
-        return false;
-      }
-      const previewSinDetalle = buildListPreviewSnapshot(row, {
-        precarga: precargaMap.get(row.id_formulario) ?? null,
-        queued: null,
-        serverPreview: null,
-      });
-      if (!previewSinDetalle) {
-        return true;
-      }
-      return countMissingPhotoSlots(previewSinDetalle.fotos) > 0;
-    });
-
-    void (async () => {
-      for (const row of pending.slice(0, 24)) {
-        if (cancelled || !row.server) {
-          return;
-        }
-        serverPreviewFetchRef.current.add(row.id_formulario);
-        try {
-          const detail = await fetchFormFromApi(row.server.id_formulario);
-          if (cancelled) {
-            return;
-          }
-          setServerPreviewById((prev) => {
-            const next = new Map(prev);
-            next.set(row.id_formulario, {
-              id_perfil_encuestador: detail.id_perfil_encuestador ?? null,
-              datos_formulario: (detail.datos_formulario ?? {}) as Record<
-                string,
-                unknown
-              >,
-              gps: {
-                latitud: detail.latitud,
-                longitud: detail.longitud,
-                precision: detail.precision ?? null,
-              },
-              fotos: mapServerFotos(detail.id_formulario, detail.fotos ?? []),
-            });
-            return next;
-          });
-        } catch {
-          // omitir filas que no se puedan leer
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [rowsFiltrados, online, precargaMap, queuedById, serverPreviewById]);
-
   const wasOnlineRef = useRef(online);
   useEffect(() => {
     if (online && !wasOnlineRef.current) {
@@ -618,24 +537,6 @@ export const FormulariosDiligenciadosPage = () => {
           if (!isStillThisRow()) {
             return;
           }
-          serverPreviewFetchRef.current.add(row.id_formulario);
-          setServerPreviewById((prev) => {
-            const next = new Map(prev);
-            next.set(row.id_formulario, {
-              id_perfil_encuestador: serverDetail.id_perfil_encuestador ?? null,
-              datos_formulario: (serverDetail.datos_formulario ?? {}) as Record<
-                string,
-                unknown
-              >,
-              gps: {
-                latitud: serverDetail.latitud,
-                longitud: serverDetail.longitud,
-                precision: serverDetail.precision ?? null,
-              },
-              fotos: [],
-            });
-            return next;
-          });
           const baseFotos = mapServerFotos(
             serverDetail.id_formulario,
             serverDetail.fotos ?? [],
@@ -1591,7 +1492,19 @@ export const FormulariosDiligenciadosPage = () => {
                   ? detailSource
                   : previewDetailSourceForRow(row, precarga);
               const syncErrorMessage = formatSyncErrorForUser(h?.ultimo_error);
-              const missingBadge = missingBadgeById.get(row.id_formulario);
+              const missingBadge = (() => {
+                if (
+                  isOpen &&
+                  selectedId === row.id_formulario &&
+                  detailSnapshot &&
+                  !detailLoading
+                ) {
+                  return getMissingBadgeFromSnapshot(detailSnapshot, {
+                    includePhotos: true,
+                  });
+                }
+                return missingBadgeById.get(row.id_formulario);
+              })();
               return (
                 <article
                   key={row.id_formulario}

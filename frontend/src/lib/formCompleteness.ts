@@ -242,11 +242,24 @@ export type MissingPendingSummary = {
 
 export function getMissingPendingSummary(
   snapshot: FormularioSnapshot,
+  options?: { includePhotos?: boolean },
 ): MissingPendingSummary {
+  const includePhotos = options?.includePhotos !== false;
   return {
     missingFieldCount: getMissingFormFieldKeysFromSnapshot(snapshot).size,
-    missingPhotoCount: countMissingPhotoSlots(snapshot.fotos),
+    missingPhotoCount: includePhotos
+      ? countMissingPhotoSlots(snapshot.fotos)
+      : 0,
   };
+}
+
+export function getMissingBadgeFromSnapshot(
+  snapshot: FormularioSnapshot,
+  options?: { includePhotos?: boolean },
+): string | null {
+  return formatMissingPendingListBadge(
+    getMissingPendingSummary(snapshot, options),
+  );
 }
 
 export function formatMissingFieldsBadge(count: number): string | null {
@@ -289,4 +302,23 @@ export function formatMissingPendingListBadge(
   const photosLabel =
     missingPhotoCount === 1 ? "1 foto" : `${missingPhotoCount} fotos`;
   return `Faltan ${fieldsLabel} y ${photosLabel}`;
+}
+
+export function hasServerCompletenessCounts(
+  counts: { missing_field_count?: number; missing_photo_count?: number } | null | undefined,
+): counts is { missing_field_count: number; missing_photo_count: number } {
+  return (
+    counts != null &&
+    typeof counts.missing_field_count === "number" &&
+    typeof counts.missing_photo_count === "number"
+  );
+}
+
+export function getMissingBadgeFromServerCounts(
+  counts: { missing_field_count: number; missing_photo_count: number },
+): string | null {
+  return formatMissingPendingListBadge({
+    missingFieldCount: counts.missing_field_count,
+    missingPhotoCount: counts.missing_photo_count,
+  });
 }

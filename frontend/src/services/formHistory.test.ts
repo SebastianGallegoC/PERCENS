@@ -9,6 +9,7 @@ import {
   collectMunicipiosFromRows,
   filterDisplayRowsWithPrecarga,
   getBeneficiarioDisplayName,
+  getMissingBadgeForListRow,
   getMunicipioDisplayValue,
   resolveDatosFormularioForExport,
   resolveGpsForExport,
@@ -581,5 +582,57 @@ describe("formHistory — listado según conectividad (Formularios diligenciados
     expect(offline).toHaveLength(1);
     expect(offline[0]?.id_formulario).toBe("ambos");
     expect(offline[0]?.onServer).toBe(true);
+  });
+});
+
+describe("getMissingBadgeForListRow", () => {
+  it("usa contadores del servidor en filas onServer sin cola local", () => {
+    const row: DisplayRow = {
+      id_formulario: "srv-1",
+      onServer: true,
+      server: {
+        id_formulario: "srv-1",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        fecha_actualizacion: "2026-01-01T00:00:00Z",
+        latitud: 7.5,
+        longitud: -72.25,
+        precision: null,
+        datos_formulario: {},
+        fotos: [],
+        missing_field_count: 4,
+        missing_photo_count: 2,
+      },
+    };
+    expect(getMissingBadgeForListRow(row)).toBe("Faltan 4 campos y 2 fotos");
+  });
+
+  it("prioriza cálculo local con formulario en cola", () => {
+    const row: DisplayRow = {
+      id_formulario: "q-1",
+      onServer: true,
+      server: {
+        id_formulario: "q-1",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        fecha_actualizacion: "2026-01-01T00:00:00Z",
+        latitud: 7.5,
+        longitud: -72.25,
+        precision: null,
+        datos_formulario: {},
+        fotos: [],
+        missing_field_count: 0,
+        missing_photo_count: 0,
+      },
+    };
+    const queued = {
+      id_formulario: "q-1",
+      fecha_hora: "2026-01-01T00:00:00Z",
+      estado_sincronizacion: "PENDIENTE" as const,
+      datos_formulario: { nombres_apellidos_encuestado: "Ana" },
+      gps: { latitud: 0, longitud: 0, precision: 100 },
+      fotos: [],
+    };
+    const label = getMissingBadgeForListRow(row, { queued });
+    expect(label).not.toBeNull();
+    expect(label).not.toBe("Faltan 0 campos");
   });
 });

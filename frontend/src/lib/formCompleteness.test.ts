@@ -5,6 +5,7 @@ import {
   countMissingFormFieldsFromSnapshot,
   countMissingPhotoSlots,
   formatMissingPendingListBadge,
+  getMissingBadgeFromSnapshot,
   getMissingFormFieldKeysFromSnapshot,
   getMissingPendingSummary,
 } from "@/lib/formCompleteness";
@@ -125,6 +126,21 @@ describe("formCompleteness", () => {
     expect(formatMissingPendingListBadge(summary)).toBe(
       "Faltan 4 campos y 6 fotos",
     );
+  });
+
+  it("omite fotos del resumen cuando includePhotos es false", () => {
+    const values = emptyValues();
+    fillAllFields(values);
+    const summary = getMissingPendingSummary(
+      { datos_formulario: values, gps: null, fotos: [] },
+      { includePhotos: false },
+    );
+    expect(summary.missingFieldCount).toBe(0);
+    expect(summary.missingPhotoCount).toBe(0);
+    expect(getMissingBadgeFromSnapshot(
+      { datos_formulario: values, gps: null, fotos: [] },
+      { includePhotos: false },
+    )).toBeNull();
   });
 
   it("cuenta fotos faltantes desde snapshot", () => {

@@ -162,6 +162,8 @@ export interface FormReadItem {
   precision: number | null;
   datos_formulario: Record<string, unknown>;
   fotos: unknown[];
+  missing_field_count?: number;
+  missing_photo_count?: number;
 }
 
 export interface FormSummaryItem {
@@ -176,6 +178,9 @@ export interface FormSummaryItem {
   municipio: string;
   fecha_visita: string;
   resultado_validacion: string;
+  /** Conteo calculado en servidor (search); evita GET detalle solo para el badge. */
+  missing_field_count?: number;
+  missing_photo_count?: number;
 }
 
 export interface FormSearchQuery {
