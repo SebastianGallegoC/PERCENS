@@ -21,6 +21,8 @@ interface FormulariosMapViewProps {
   isRefreshing?: boolean;
   error: string | null;
   onRetry: () => void;
+  /** Cuando la sección está colapsada el mapa no debe montarse (evita errores de Leaflet). */
+  sectionOpen?: boolean;
 }
 
 function markerColor(resultado: string): string {
@@ -89,6 +91,25 @@ function MapMarkers({ points }: { points: FormMapPointItem[] }) {
   return null;
 }
 
+function MapInvalidateSizeOnMount() {
+  const map = useMap();
+
+  useEffect(() => {
+    let cancelled = false;
+    const frameId = requestAnimationFrame(() => {
+      if (!cancelled) {
+        map.invalidateSize({ animate: false });
+      }
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frameId);
+    };
+  }, [map]);
+
+  return null;
+}
+
 /** Ajusta la vista solo la primera vez que hay puntos; no al cambiar filtros. */
 function MapFitBoundsOnce({ points }: { points: FormMapPointItem[] }) {
   const map = useMap();
@@ -98,16 +119,42 @@ function MapFitBoundsOnce({ points }: { points: FormMapPointItem[] }) {
     if (hasFittedRef.current || points.length === 0) {
       return;
     }
-    hasFittedRef.current = true;
 
-    if (points.length === 1) {
-      const one = points[0];
-      map.setView([one.latitud, one.longitud], 14);
-      return;
-    }
+    let cancelled = false;
 
-    const bounds = L.latLngBounds(points.map((point) => [point.latitud, point.longitud]));
-    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
+    const fitView = () => {
+      if (cancelled || hasFittedRef.current) {
+        return;
+      }
+
+      const { x, y } = map.getSize();
+      if (x === 0 || y === 0) {
+        return;
+      }
+
+      hasFittedRef.current = true;
+
+      if (points.length === 1) {
+        const one = points[0];
+        map.setView([one.latitud, one.longitud], 14, { animate: false });
+        return;
+      }
+
+      const bounds = L.latLngBounds(
+        points.map((point) => [point.latitud, point.longitud]),
+      );
+      map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14, animate: false });
+    };
+
+    map.whenReady(() => {
+      map.invalidateSize({ animate: false });
+      requestAnimationFrame(fitView);
+    });
+
+    return () => {
+      cancelled = true;
+      map.stop();
+    };
   }, [map, points]);
 
   return null;
@@ -120,6 +167,7 @@ export const FormulariosMapView = ({
   isRefreshing = false,
   error,
   onRetry,
+  sectionOpen = true,
 }: FormulariosMapViewProps) => {
   if (loadState === "offline") {
     return (
@@ -204,19 +252,26 @@ export const FormulariosMapView = ({
           </div>
         ) : null}
 
-        <MapContainer
-          center={[4.570868, -74.297333]}
-          zoom={6}
-          className="h-full w-full"
-          preferCanvas
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <MapMarkers points={points} />
-          <MapFitBoundsOnce points={points} />
-        </MapContainer>
+        {sectionOpen ? (
+          <MapContainer
+            center={[4.570868, -74.297333]}
+            zoom={6}
+            className="h-full w-full"
+            preferCanvas
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <MapInvalidateSizeOnMount />
+            <MapMarkers points={points} />
+            <MapFitBoundsOnce points={points} />
+          </MapContainer>
+        ) : (
+          <div className="flex h-full items-center justify-center bg-slate-50 px-4 text-center text-sm text-slate-500">
+            Expandí la sección para cargar el mapa.
+          </div>
+        )}
       </div>
 
       <p className="mt-2 text-xs text-slate-500">

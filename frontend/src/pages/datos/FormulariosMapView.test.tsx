@@ -12,6 +12,12 @@ vi.mock("react-leaflet", () => ({
     removeLayer: vi.fn(),
     setView: vi.fn(),
     fitBounds: vi.fn(),
+    whenReady: (callback: () => void) => {
+      callback();
+    },
+    invalidateSize: vi.fn(),
+    stop: vi.fn(),
+    getSize: () => ({ x: 400, y: 320 }),
   }),
 }));
 
@@ -48,6 +54,21 @@ describe("FormulariosMapView", () => {
     expect(
       screen.getByText(/No hay formularios con coordenadas válidas/i),
     ).toBeInTheDocument();
+  });
+
+  it("no monta el mapa cuando la sección está colapsada", () => {
+    render(
+      <FormulariosMapView
+        points={[]}
+        total={0}
+        loadState="ready"
+        error={null}
+        onRetry={vi.fn()}
+        sectionOpen={false}
+      />,
+    );
+    expect(screen.queryByTestId("map-container")).not.toBeInTheDocument();
+    expect(screen.getByText(/Expandí la sección para cargar el mapa/i)).toBeInTheDocument();
   });
 
   it("muestra aviso de actualización sin desmontar el mapa", () => {

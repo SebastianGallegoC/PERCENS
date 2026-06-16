@@ -328,6 +328,7 @@ export const DatosPage = () => {
               isRefreshing={mapIsRefreshing}
               error={mapError}
               onRetry={() => void reloadMapPoints()}
+              sectionOpen={openSections.has("mapa")}
             />
           </Suspense>
         </DatosReportSection>
