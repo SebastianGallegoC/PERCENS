@@ -7,6 +7,27 @@ import { municipioFilterLabel } from "@/constants/formStatsMunicipio";
 import type { FormMapPointItem } from "@/services/api";
 import { spreadMapPoints } from "@/pages/datos/mapPointSpread";
 
+function isMapUsable(map: L.Map): boolean {
+  try {
+    const container = map.getContainer();
+    return Boolean(container?.isConnected);
+  } catch {
+    return false;
+  }
+}
+
+/** Evita errores de Leaflet cuando el mapa se desmonta durante navegación o colapso de sección. */
+function safeMapCall(map: L.Map, operation: () => void): void {
+  if (!isMapUsable(map)) {
+    return;
+  }
+  try {
+    operation();
+  } catch {
+    // El contenedor o los panes ya fueron eliminados del DOM.
+  }
+}
+
 interface FormulariosMapViewProps {
   points: FormMapPointItem[];
   total: number;
@@ -82,9 +103,14 @@ function MapMarkers({ points }: { points: FormMapPointItem[] }) {
       layerGroup.addLayer(marker);
     }
 
-    map.addLayer(layerGroup);
+    safeMapCall(map, () => {
+      map.addLayer(layerGroup);
+    });
+
     return () => {
-      map.removeLayer(layerGroup);
+      safeMapCall(map, () => {
+        map.removeLayer(layerGroup);
+      });
     };
   }, [displayPoints, map]);
 
@@ -98,7 +124,9 @@ function MapInvalidateSizeOnMount() {
     let cancelled = false;
     const frameId = requestAnimationFrame(() => {
       if (!cancelled) {
-        map.invalidateSize({ animate: false });
+        safeMapCall(map, () => {
+          map.invalidateSize({ animate: false });
+        });
       }
     });
     return () => {
@@ -127,33 +155,43 @@ function MapFitBoundsOnce({ points }: { points: FormMapPointItem[] }) {
         return;
       }
 
-      const { x, y } = map.getSize();
-      if (x === 0 || y === 0) {
-        return;
-      }
+      safeMapCall(map, () => {
+        const { x, y } = map.getSize();
+        if (x === 0 || y === 0) {
+          return;
+        }
 
-      hasFittedRef.current = true;
+        hasFittedRef.current = true;
 
-      if (points.length === 1) {
-        const one = points[0];
-        map.setView([one.latitud, one.longitud], 14, { animate: false });
-        return;
-      }
+        if (points.length === 1) {
+          const one = points[0];
+          map.setView([one.latitud, one.longitud], 14, { animate: false });
+          return;
+        }
 
-      const bounds = L.latLngBounds(
-        points.map((point) => [point.latitud, point.longitud]),
-      );
-      map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14, animate: false });
+        const bounds = L.latLngBounds(
+          points.map((point) => [point.latitud, point.longitud]),
+        );
+        map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14, animate: false });
+      });
     };
 
     map.whenReady(() => {
-      map.invalidateSize({ animate: false });
-      requestAnimationFrame(fitView);
+      if (cancelled) {
+        return;
+      }
+      safeMapCall(map, () => {
+        map.invalidateSize({ animate: false });
+        requestAnimationFrame(() => {
+          if (!cancelled) {
+            fitView();
+          }
+        });
+      });
     });
 
     return () => {
       cancelled = true;
-      map.stop();
     };
   }, [map, points]);
 
@@ -169,6 +207,14 @@ export const FormulariosMapView = ({
   onRetry,
   sectionOpen = true,
 }: FormulariosMapViewProps) => {
+  const mapMountKeyRef = useRef(0);
+
+  useEffect(() => {
+    if (sectionOpen) {
+      mapMountKeyRef.current += 1;
+    }
+  }, [sectionOpen]);
+
   if (loadState === "offline") {
     return (
       <p className="py-6 text-center text-sm text-slate-500">
@@ -254,6 +300,7 @@ export const FormulariosMapView = ({
 
         {sectionOpen ? (
           <MapContainer
+            key={`formularios-map-${mapMountKeyRef.current}`}
             center={[4.570868, -74.297333]}
             zoom={6}
             className="h-full w-full"

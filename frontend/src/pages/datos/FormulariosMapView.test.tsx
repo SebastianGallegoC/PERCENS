@@ -7,18 +7,23 @@ vi.mock("react-leaflet", () => ({
     <div data-testid="map-container">{children}</div>
   ),
   TileLayer: () => <div data-testid="tile-layer" />,
-  useMap: () => ({
-    addLayer: vi.fn(),
-    removeLayer: vi.fn(),
-    setView: vi.fn(),
-    fitBounds: vi.fn(),
-    whenReady: (callback: () => void) => {
-      callback();
-    },
-    invalidateSize: vi.fn(),
-    stop: vi.fn(),
-    getSize: () => ({ x: 400, y: 320 }),
-  }),
+  useMap: () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    return {
+      addLayer: vi.fn(),
+      removeLayer: vi.fn(),
+      setView: vi.fn(),
+      fitBounds: vi.fn(),
+      whenReady: (callback: () => void) => {
+        callback();
+      },
+      invalidateSize: vi.fn(),
+      stop: vi.fn(),
+      getSize: () => ({ x: 400, y: 320 }),
+      getContainer: () => container,
+    };
+  },
 }));
 
 import { FormulariosMapView } from "@/pages/datos/FormulariosMapView";
