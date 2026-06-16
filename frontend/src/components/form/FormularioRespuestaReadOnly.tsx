@@ -19,6 +19,10 @@ import {
 } from "@/config/registroFotografico";
 import { displayCuentaConCocinaValue } from "@/lib/cuentaConCocina";
 import { displayDatosEncuestadoValue } from "@/lib/datosEncuestado";
+import {
+  getMissingFormFieldKeysFromSnapshot,
+  getMissingPhotoSlots,
+} from "@/lib/formCompleteness";
 import { formatPerfilEncuestadorDisplay } from "@/services/encuestadorProfiles";
 import type { FormFieldKey } from "@/types/formFields";
 
@@ -79,11 +83,13 @@ function ReadOnlySection({
   fieldKeys,
   datos,
   initiallyOpen,
+  missingSummary,
 }: {
   sectionTitle: string;
   fieldKeys: readonly FormFieldKey[];
   datos: Record<string, unknown>;
   initiallyOpen: boolean;
+  missingSummary?: string | null;
 }) {
   const [open, setOpen] = useState(initiallyOpen);
   return (
@@ -92,8 +98,13 @@ function ReadOnlySection({
       open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
-      <summary className="cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
-        {sectionTitle}
+      <summary className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
+        <span>{sectionTitle}</span>
+        {missingSummary ? (
+          <span className="shrink-0 rounded-md bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-900">
+            {missingSummary}
+          </span>
+        ) : null}
       </summary>
       <dl className="border-t border-slate-100 px-4 pb-3 pt-1">
         {fieldKeys
@@ -121,6 +132,8 @@ export const FormularioRespuestaReadOnly = ({
   snapshot: FormularioSnapshot;
 }) => {
   const { datos_formulario: datos, gps, fotos = [] } = snapshot;
+  const missingFieldKeys = getMissingFormFieldKeysFromSnapshot(snapshot);
+  const missingPhotoSlots = getMissingPhotoSlots(snapshot.fotos);
   const slotDeFoto = (f: (typeof fotos)[number]) => {
     if (isRegistroFotoSlot(f.slot)) {
       return f.slot;
@@ -255,6 +268,38 @@ export const FormularioRespuestaReadOnly = ({
       </details>
     );
 
+  const badgeForSection = (
+    sectionId: string,
+    fieldKeys: readonly FormFieldKey[],
+  ): string | null => {
+    const missingFieldsCount = fieldKeys.filter((k) =>
+      missingFieldKeys.has(k),
+    ).length;
+    const missingPhotosCount =
+      sectionId === "desplazamiento" ? missingPhotoSlots.length : 0;
+
+    if (missingFieldsCount === 0 && missingPhotosCount === 0) {
+      return null;
+    }
+    if (missingPhotosCount > 0 && missingFieldsCount === 0) {
+      return missingPhotosCount === 1
+        ? "Falta 1 foto"
+        : `Faltan ${missingPhotosCount} fotos`;
+    }
+    if (missingFieldsCount > 0 && missingPhotosCount === 0) {
+      return missingFieldsCount === 1
+        ? "Falta 1 campo"
+        : `Faltan ${missingFieldsCount} campos`;
+    }
+    // Ambos.
+    const total = missingFieldsCount + missingPhotosCount;
+    return total === 1 ? "Falta 1 pendiente" : `Faltan ${total} pendientes`;
+  };
+
+  const firstMissingSectionId =
+    FORM_SECTIONS.find((s) => badgeForSection(s.id, s.fields) != null)
+      ?.id ?? null;
+
   return (
     <div className="space-y-4 text-slate-800">
       {gps ? (
@@ -299,10 +344,15 @@ export const FormularioRespuestaReadOnly = ({
             {section.id === "encuestador" ? (
               <details
                 className="rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md"
-                open={idx === 0}
+                open={idx === 0 || section.id === firstMissingSectionId}
               >
-                <summary className="cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
-                  {section.title}
+                <summary className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900">
+                  <span>{section.title}</span>
+                  {badgeForSection(section.id, section.fields) ? (
+                    <span className="shrink-0 rounded-md bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-900">
+                      {badgeForSection(section.id, section.fields)}
+                    </span>
+                  ) : null}
                 </summary>
                 <dl className="border-t border-slate-100 px-4 pb-3 pt-1">
                   <div className={rowClass}>
@@ -323,7 +373,8 @@ export const FormularioRespuestaReadOnly = ({
                 sectionTitle={section.title}
                 fieldKeys={section.fields}
                 datos={datos}
-                initiallyOpen={idx === 0}
+                initiallyOpen={idx === 0 || section.id === firstMissingSectionId}
+                missingSummary={badgeForSection(section.id, section.fields)}
               />
             )}
             {section.id === "desplazamiento" ? registroFotograficoPanel : null}

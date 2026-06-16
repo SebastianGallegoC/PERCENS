@@ -148,9 +148,9 @@ function fotoSlotHasContent(foto: {
   );
 }
 
-export function countMissingPhotoSlots(
+export function getMissingPhotoSlots(
   fotos: FormularioSnapshot["fotos"] | undefined,
-): number {
+): RegistroFotoSlot[] {
   const present = new Set<RegistroFotoSlot>();
   for (const foto of fotos ?? []) {
     const slot = resolveFotoSlot(foto);
@@ -159,7 +159,13 @@ export function countMissingPhotoSlots(
     }
     present.add(slot);
   }
-  return REGISTRO_FOTO_SLOT_NUMBERS.filter((slot) => !present.has(slot)).length;
+  return REGISTRO_FOTO_SLOT_NUMBERS.filter((slot) => !present.has(slot));
+}
+
+export function countMissingPhotoSlots(
+  fotos: FormularioSnapshot["fotos"] | undefined,
+): number {
+  return getMissingPhotoSlots(fotos).length;
 }
 
 function shouldSkipFieldInCompletenessLoop(key: FormFieldKey): boolean {
@@ -183,19 +189,28 @@ export function countMissingFormFields(values: FormValues): number {
   return missing;
 }
 
-export function countMissingFormFieldsFromSnapshot(
+export function getMissingFormFieldKeysFromSnapshot(
   snapshot: FormularioSnapshot,
-): number {
+): Set<FormFieldKey> {
   const values = buildFormValuesFromSnapshot(snapshot);
   const gps = isGpsPlaceholder(snapshot.gps) ? null : snapshot.gps;
-  let missing = 0;
+  const missing = new Set<FormFieldKey>();
   for (const key of REQUIRED_FIELDS) {
     if (shouldSkipFieldInCompletenessLoop(key)) {
       continue;
     }
     if (isFieldMissing(key, values, gps)) {
-      missing += 1;
+      missing.add(key);
     }
   }
-  return missing + countMissingPhotoSlots(snapshot.fotos);
+  return missing;
+}
+
+export function countMissingFormFieldsFromSnapshot(
+  snapshot: FormularioSnapshot,
+): number {
+  return (
+    getMissingFormFieldKeysFromSnapshot(snapshot).size +
+    countMissingPhotoSlots(snapshot.fotos)
+  );
 }
