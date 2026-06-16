@@ -47,6 +47,7 @@ vi.mock("@/lib/authStorage", () => ({
 }));
 
 import { getCurrentMonthIsoDateRange } from "@/pages/datos/datosDateDefaults";
+import { saveDatosPagePreferences } from "@/pages/datos/datosPagePreferences";
 import { DatosPage } from "@/pages/DatosPage";
 
 const sampleStats = {
@@ -65,6 +66,7 @@ describe("DatosPage", () => {
   afterEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    sessionStorage.clear();
     mockUseConnectivity.mockReturnValue(true);
     mockFetchFormStatsMunicipios.mockResolvedValue([
       "Cúcuta",
@@ -306,5 +308,63 @@ describe("DatosPage", () => {
       const lastCall = mockFetchFormStats.mock.calls.at(-1)?.[0];
       expect(lastCall).toMatchObject({ municipio: "Cúcuta" });
     });
+  });
+
+  it("restaura secciones y filtros guardados al volver a Datos", async () => {
+    localStorage.setItem("nosignal_access_token", "token");
+    mockFetchFormStats.mockResolvedValue(sampleStats);
+    const { desde } = getCurrentMonthIsoDateRange();
+
+    saveDatosPagePreferences(
+      {
+        openSections: new Set(["mapa"]),
+        municipio: "Cúcuta",
+        fechaDesde: "2026-01-01",
+        fechaHasta: "2026-01-31",
+        anioMensual: 2025,
+        municipioMensual: "Medellín",
+        mapMunicipios: ["Cúcuta"],
+        mapMunicipiosInitialized: true,
+        mapFechaDesde: "2026-02-01",
+        mapFechaHasta: "2026-02-28",
+      },
+      Date.now(),
+    );
+
+    const view = render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+    view.unmount();
+
+    render(
+      <MemoryRouter>
+        <DatosPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(mockFetchFormStats).toHaveBeenCalled();
+      const lastCall = mockFetchFormStats.mock.calls.at(-1)?.[0];
+      expect(lastCall).toMatchObject({
+        municipio: "Cúcuta",
+        fecha_desde: "2026-01-01",
+        fecha_hasta: "2026-01-31",
+      });
+    });
+
+    const validationSection = screen.getByLabelText(
+      "Validación",
+    ) as HTMLDetailsElement;
+    expect(validationSection.open).toBe(false);
+
+    const validationFilters = within(validationSection);
+    expect(
+      (validationFilters.getByLabelText(/^Desde$/i) as HTMLInputElement).value,
+    ).toBe("2026-01-01");
+    expect(
+      (validationFilters.getByLabelText(/^Hasta$/i) as HTMLInputElement).value,
+    ).not.toBe(desde);
   });
 });

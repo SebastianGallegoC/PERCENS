@@ -23,41 +23,35 @@ import { ValidationStatsChart } from "@/pages/datos/ValidationStatsChart";
 import type { FormStatsMonthlyQuery, FormStatsQuery } from "@/services/api";
 
 import {
-  getCurrentCalendarYear,
   getCurrentMonthIsoDateRange,
   getDefaultMonthlyAnio,
 } from "@/pages/datos/datosDateDefaults";
+import {
+  getInitialDatosPageUiState,
+  saveDatosPagePreferences,
+} from "@/pages/datos/datosPagePreferences";
 
 const FormulariosMapView = lazy(async () => {
   const mod = await import("@/pages/datos/FormulariosMapView");
   return { default: mod.FormulariosMapView };
 });
 
-const DATOS_SECTIONS = ["mapa", "validacion", "mensual"] as const;
-
 export const DatosPage = () => {
   const online = useConnectivityStatus();
-  const [openSections, setOpenSections] = useState(
-    () => new Set<string>(DATOS_SECTIONS),
-  );
-  const [municipio, setMunicipio] = useState("");
-  const [fechaDesde, setFechaDesde] = useState(
-    () => getCurrentMonthIsoDateRange().desde,
-  );
-  const [fechaHasta, setFechaHasta] = useState(
-    () => getCurrentMonthIsoDateRange().hasta,
-  );
+  const [initialUi] = useState(getInitialDatosPageUiState);
+  const [openSections, setOpenSections] = useState(initialUi.openSections);
+  const [municipio, setMunicipio] = useState(initialUi.municipio);
+  const [fechaDesde, setFechaDesde] = useState(initialUi.fechaDesde);
+  const [fechaHasta, setFechaHasta] = useState(initialUi.fechaHasta);
 
-  const [anioMensual, setAnioMensual] = useState(() => getCurrentCalendarYear());
-  const [municipioMensual, setMunicipioMensual] = useState(MUNICIPIO_MENSUAL_TODOS);
-  const [mapMunicipios, setMapMunicipios] = useState<string[]>([]);
-  const [mapMunicipiosInitialized, setMapMunicipiosInitialized] = useState(false);
-  const [mapFechaDesde, setMapFechaDesde] = useState(
-    () => getCurrentMonthIsoDateRange().desde,
+  const [anioMensual, setAnioMensual] = useState(initialUi.anioMensual);
+  const [municipioMensual, setMunicipioMensual] = useState(initialUi.municipioMensual);
+  const [mapMunicipios, setMapMunicipios] = useState(initialUi.mapMunicipios);
+  const [mapMunicipiosInitialized, setMapMunicipiosInitialized] = useState(
+    initialUi.mapMunicipiosInitialized,
   );
-  const [mapFechaHasta, setMapFechaHasta] = useState(
-    () => getCurrentMonthIsoDateRange().hasta,
-  );
+  const [mapFechaDesde, setMapFechaDesde] = useState(initialUi.mapFechaDesde);
+  const [mapFechaHasta, setMapFechaHasta] = useState(initialUi.mapFechaHasta);
 
   const filters = useMemo((): FormStatsQuery => {
     const q: FormStatsQuery = {};
@@ -172,6 +166,35 @@ export const DatosPage = () => {
     mapMunicipiosInitialized,
     municipioOptions,
     municipiosLoadState,
+  ]);
+
+  const openSectionsKey = [...openSections].sort().join("|");
+  const mapMunicipiosKey = mapMunicipios.join("|");
+
+  useEffect(() => {
+    saveDatosPagePreferences({
+      openSections,
+      municipio,
+      fechaDesde,
+      fechaHasta,
+      anioMensual,
+      municipioMensual,
+      mapMunicipios,
+      mapMunicipiosInitialized,
+      mapFechaDesde,
+      mapFechaHasta,
+    });
+  }, [
+    openSectionsKey,
+    municipio,
+    fechaDesde,
+    fechaHasta,
+    anioMensual,
+    municipioMensual,
+    mapMunicipiosKey,
+    mapMunicipiosInitialized,
+    mapFechaDesde,
+    mapFechaHasta,
   ]);
 
   const clearValidationFilters = () => {
