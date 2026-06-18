@@ -2,8 +2,15 @@ import json
 import logging
 from time import time
 
-from fastapi import APIRouter, HTTPException, status
 import bcrypt
+from fastapi import APIRouter, HTTPException, status
+
+from app.core.config import settings
+from app.core.security import create_access_token
+from app.schemas.auth import LoginRequest, TokenResponse
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
 FAILED_ATTEMPTS: dict[str, list[float]] = {}
 MAX_FAILED_ATTEMPTS = 5
 WINDOW_SECONDS = 300
