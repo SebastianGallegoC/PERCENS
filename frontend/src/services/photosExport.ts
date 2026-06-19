@@ -3,11 +3,9 @@ import JSZip from "jszip";
 import {
   isRegistroFotoSlot,
   REGISTRO_FOTO_SLOTS,
-  registroFotoExportFolder,
   type RegistroFotoSlot,
 } from "@/config/registroFotografico";
 import type { FotoForm, OfflineForm } from "@/services/db";
-import { matrizCaracterizacionFilename } from "@/services/matrizCaracterizacionExport";
 
 function stripWindowsIllegalChars(value: string): string {
   return [...value]
@@ -18,21 +16,32 @@ function stripWindowsIllegalChars(value: string): string {
     .join("");
 }
 
-/** Nombre de carpeta raíz dentro del ZIP: `Fotos-<encuestado>` (mantiene tildes y espacios). */
-export function buildBeneficiarioFolderName(form: OfflineForm): string {
+export function photosExportDateStamp(date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Carpeta raíz dentro del ZIP: `FotosFormulariosPercens-YYYY-MM-DD`. */
+export function photosExportRootFolderName(date = new Date()): string {
+  return `FotosFormulariosPercens-${photosExportDateStamp(date)}`;
+}
+
+/** Subcarpeta por encuestado (nombre del beneficiario). */
+export function photosExportEncuestadoFolderName(form: OfflineForm): string {
   const datos = form.datos_formulario as Record<string, unknown>;
   let raw = String(datos.nombres_apellidos_encuestado ?? "").trim();
   raw = stripWindowsIllegalChars(raw);
   raw = raw.replace(/\s+/g, " ").replace(/^ +| +$/g, "");
   raw = raw.replace(/[.\s]+$/g, "");
   raw = raw.slice(0, 80);
-  const inner = raw.length > 0 ? raw : "sin encuestado";
-  return `Fotos-${inner}`;
+  return raw.length > 0 ? raw : "sin encuestado";
 }
 
-/** Nombre del archivo .zip descargado (ASCII seguro, análogo a la matriz Excel). */
-export function photosZipFilename(form: OfflineForm): string {
-  return matrizCaracterizacionFilename(form).replace(/\.xlsx$/i, ".zip");
+/** Nombre del archivo .zip descargado. */
+export function photosZipFilename(date = new Date()): string {
+  return `${photosExportRootFolderName(date)}.zip`;
 }
 
 export function dataUrlToUint8Array(dataUrl: string): Uint8Array {
@@ -66,20 +75,32 @@ function safeBasename(name: string): string {
   return base.replace(/\.\./g, "_");
 }
 
-function uniqueNameInFolder(baseName: string, used: Set<string>): string {
-  const safe = safeBasename(baseName);
-  if (!used.has(safe)) {
-    used.add(safe);
-    return safe;
+function extensionFromNombreArchivo(name: string): string {
+  const base = safeBasename(name);
+  const dot = base.lastIndexOf(".");
+  if (dot > 0 && dot < base.length - 1) {
+    return base.slice(dot);
   }
-  const dot = safe.lastIndexOf(".");
-  const stem = dot > 0 ? safe.slice(0, dot) : safe;
-  const ext = dot > 0 ? safe.slice(dot) : "";
+  return "";
+}
+
+export function fotoExportFileName(
+  slot: RegistroFotoSlot,
+  nombreArchivo: string,
+): string {
+  return `foto${slot}${extensionFromNombreArchivo(nombreArchivo)}`;
+}
+
+function uniqueEncuestadoFolderName(baseName: string, used: Set<string>): string {
+  if (!used.has(baseName)) {
+    used.add(baseName);
+    return baseName;
+  }
   let n = 2;
-  let candidate = `${stem}-${n}${ext}`;
+  let candidate = `${baseName}-${n}`;
   while (used.has(candidate)) {
     n += 1;
-    candidate = `${stem}-${n}${ext}`;
+    candidate = `${baseName}-${n}`;
   }
   used.add(candidate);
   return candidate;
@@ -113,56 +134,53 @@ function partitionFotosBySlot(fotos: FotoForm[]): Record<RegistroFotoSlot, FotoF
   return bySlot;
 }
 
-function safeBeneficiarioName(form: OfflineForm): string {
-  const datos = form.datos_formulario as Record<string, unknown>;
-  let raw = String(datos.nombres_apellidos_encuestado ?? "").trim();
-  raw = stripWindowsIllegalChars(raw);
-  raw = raw.replace(/\s+/g, " ").replace(/^ +| +$/g, "");
-  raw = raw.replace(/[.\s]+$/g, "");
-  raw = raw.slice(0, 80);
-  return raw.length > 0 ? raw : "sin encuestado";
-}
-
-function safeFechaFromForm(form: OfflineForm): string {
-  const sendDate = Date.parse(form.fecha_hora);
-  if (Number.isNaN(sendDate)) {
-    return "sin_fecha";
-  }
-  const d = new Date(sendDate);
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const hh = String(d.getUTCHours()).padStart(2, "0");
-  const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  return `${y}-${m}-${day}_${hh}-${mm}`;
-}
-
-function bulkFormFolderName(form: OfflineForm): string {
-  return `${safeBeneficiarioName(form)}-${safeFechaFromForm(form)}`;
-}
-
-export async function buildPhotosZip(form: OfflineForm): Promise<Blob> {
-  const fotos = form.fotos ?? [];
+function appendFormPhotosToZip(
+  zip: JSZip,
+  form: OfflineForm,
+  rootFolder: string,
+  encuestadoFolder: string,
+): boolean {
+  const fotos = (form.fotos ?? []).filter(
+    (f): f is FotoForm => typeof f?.data === "string" && f.data.trim() !== "",
+  );
   if (fotos.length === 0) {
-    throw new Error("No hay fotos para exportar.");
+    return false;
   }
 
-  const zip = new JSZip();
-  const root = buildBeneficiarioFolderName(form);
   const bySlot = partitionFotosBySlot(fotos);
+  let addedAtLeastOne = false;
+  const folderBase = `${rootFolder}/${encuestadoFolder}`;
 
   for (const { slot } of REGISTRO_FOTO_SLOTS) {
     const list = bySlot[slot];
     if (list.length === 0) {
       continue;
     }
-    const folder = `${root}/${registroFotoExportFolder(slot)}`;
-    const used = new Set<string>();
-    for (const foto of list) {
-      const fileName = uniqueNameInFolder(foto.nombre_archivo, used);
-      const bytes = dataUrlToUint8Array(foto.data);
-      zip.file(`${folder}/${fileName}`, bytes);
-    }
+    const foto = list[0];
+    const fileName = fotoExportFileName(slot, foto.nombre_archivo);
+    const bytes = dataUrlToUint8Array(foto.data);
+    zip.file(`${folderBase}/${fileName}`, bytes);
+    addedAtLeastOne = true;
+  }
+
+  return addedAtLeastOne;
+}
+
+export async function buildPhotosZip(
+  form: OfflineForm,
+  date = new Date(),
+): Promise<Blob> {
+  const fotos = form.fotos ?? [];
+  if (fotos.length === 0) {
+    throw new Error("No hay fotos para exportar.");
+  }
+
+  const zip = new JSZip();
+  const rootFolder = photosExportRootFolderName(date);
+  const encuestadoFolder = photosExportEncuestadoFolderName(form);
+  const added = appendFormPhotosToZip(zip, form, rootFolder, encuestadoFolder);
+  if (!added) {
+    throw new Error("No hay fotos para exportar.");
   }
 
   return zip.generateAsync({
@@ -173,11 +191,12 @@ export async function buildPhotosZip(form: OfflineForm): Promise<Blob> {
 }
 
 export async function downloadPhotosZip(form: OfflineForm): Promise<void> {
-  const blob = await buildPhotosZip(form);
+  const date = new Date();
+  const blob = await buildPhotosZip(form, date);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = photosZipFilename(form);
+  a.download = photosZipFilename(date);
   a.rel = "noopener";
   document.body.appendChild(a);
   a.click();
@@ -186,41 +205,28 @@ export async function downloadPhotosZip(form: OfflineForm): Promise<void> {
 }
 
 export function photosBulkZipFilename(date = new Date()): string {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hh = String(date.getUTCHours()).padStart(2, "0");
-  const mm = String(date.getUTCMinutes()).padStart(2, "0");
-  return `Fotos_Formularios_${y}-${m}-${day}_${hh}-${mm}.zip`;
+  return photosZipFilename(date);
 }
 
-export async function buildPhotosBulkZip(forms: OfflineForm[]): Promise<Blob> {
+export async function buildPhotosBulkZip(
+  forms: OfflineForm[],
+  date = new Date(),
+): Promise<Blob> {
   const zip = new JSZip();
-  const root = "Fotos Formularios";
+  const rootFolder = photosExportRootFolderName(date);
+  const usedEncuestadoFolders = new Set<string>();
   let addedAtLeastOne = false;
 
   for (const form of forms) {
-    const fotos = (form.fotos ?? []).filter(
-      (f): f is FotoForm => typeof f?.data === "string" && f.data.trim() !== "",
+    const baseName = photosExportEncuestadoFolderName(form);
+    const encuestadoFolder = uniqueEncuestadoFolderName(
+      baseName,
+      usedEncuestadoFolders,
     );
-    if (fotos.length === 0) {
-      continue;
-    }
-    const folderBase = `${root}/${bulkFormFolderName(form)}`;
-    const bySlot = partitionFotosBySlot(fotos);
-    for (const { slot } of REGISTRO_FOTO_SLOTS) {
-      const list = bySlot[slot];
-      if (list.length === 0) {
-        continue;
-      }
-      const used = new Set<string>();
-      const folder = `${folderBase}/${registroFotoExportFolder(slot)}`;
-      for (const foto of list) {
-        const fileName = uniqueNameInFolder(foto.nombre_archivo, used);
-        const bytes = dataUrlToUint8Array(foto.data);
-        zip.file(`${folder}/${fileName}`, bytes);
-        addedAtLeastOne = true;
-      }
+    if (
+      appendFormPhotosToZip(zip, form, rootFolder, encuestadoFolder)
+    ) {
+      addedAtLeastOne = true;
     }
   }
 
@@ -236,11 +242,12 @@ export async function buildPhotosBulkZip(forms: OfflineForm[]): Promise<Blob> {
 }
 
 export async function downloadPhotosBulkZip(forms: OfflineForm[]): Promise<void> {
-  const blob = await buildPhotosBulkZip(forms);
+  const date = new Date();
+  const blob = await buildPhotosBulkZip(forms, date);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = photosBulkZipFilename();
+  a.download = photosBulkZipFilename(date);
   a.rel = "noopener";
   document.body.appendChild(a);
   a.click();

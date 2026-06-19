@@ -952,6 +952,7 @@ export const FormulariosDiligenciadosPage = () => {
     descargarFotosDeTodos,
   } = useFormExports({
     rows: rowsMostrados,
+    precargaById: precargaMap,
     detailSnapshot,
     detailPrecarga,
     setDescargaExcelError,

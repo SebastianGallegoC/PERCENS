@@ -1,4 +1,4 @@
-import { fetchFormPhotoDataUrl } from '@/services/api';
+import { fetchFormFromApi, fetchFormPhotoDataUrl } from '@/services/api';
 import type { FotoForm, HistorialForm, PrecargaForm } from '@/services/db';
 import { mapServerFotos, type DisplayRow } from '@/services/formHistory';
 import {
@@ -49,13 +49,27 @@ export async function hydrateFotosFromServerIfNeeded(
     return normalizeFotosToSlots(existing);
   }
   const serverRow = row.server;
-  if (!serverRow || (serverRow.fotos?.length ?? 0) === 0) {
+  if (!serverRow) {
     return existing;
   }
-  const serverFotos = mapServerFotos(
-    serverRow.id_formulario,
-    serverRow.fotos ?? [],
-  );
+
+  let rawFotos = serverRow.fotos ?? [];
+  if (rawFotos.length === 0) {
+    if (serverRow.missing_photo_count === 0) {
+      return existing;
+    }
+    try {
+      const detail = await fetchFormFromApi(serverRow.id_formulario);
+      rawFotos = detail.fotos ?? [];
+    } catch {
+      return existing;
+    }
+  }
+  if (rawFotos.length === 0) {
+    return existing;
+  }
+
+  const serverFotos = mapServerFotos(serverRow.id_formulario, rawFotos);
   const fetched: FotoForm[] = [];
   for (const foto of serverFotos) {
     if (foto.serverFormId == null || foto.serverIndex == null) {

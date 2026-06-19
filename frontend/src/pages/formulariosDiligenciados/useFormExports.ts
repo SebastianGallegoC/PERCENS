@@ -22,6 +22,7 @@ import {
 
 type Args = {
   rows: DisplayRow[];
+  precargaById?: Map<string, PrecargaForm>;
   detailSnapshot: FormularioSnapshot | null;
   detailPrecarga: PrecargaForm | null;
   setDescargaExcelError: (value: string | null) => void;
@@ -34,6 +35,7 @@ type Args = {
 
 export const useFormExports = ({
   rows,
+  precargaById,
   detailSnapshot,
   detailPrecarga,
   setDescargaExcelError,
@@ -248,12 +250,14 @@ export const useFormExports = ({
       const exportables = [];
       for (const row of rows) {
         const queued = queuedById.get(row.id_formulario);
+        const precarga =
+          precargaById?.get(row.id_formulario) ?? row.precargaSolo ?? null;
         const datos = resolveDatosFormularioForExport(row, queued);
         const gps = resolveGpsForExport(row, queued);
         let fotos = fotosConSlotDesdeDetalleExport(
           (queued?.fotos ??
             row.historial?.fotos ??
-            row.precargaSolo?.fotos ??
+            precarga?.fotos ??
             []) as FotoSnapshotLike[],
         );
         fotos = await hydrateFotosFromServerIfNeeded(row, fotos);
@@ -282,7 +286,7 @@ export const useFormExports = ({
     } finally {
       setDescargandoTodasFotos(false);
     }
-  }, [rows, setDescargaFotosError, setDescargandoTodasFotos]);
+  }, [precargaById, rows, setDescargaFotosError, setDescargandoTodasFotos]);
 
   return {
     descargarExcelDelRegistro,
