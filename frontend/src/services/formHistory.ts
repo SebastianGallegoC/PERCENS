@@ -6,7 +6,7 @@ import {
   isRegistroFotoSlot,
   REGISTRO_FOTO_SLOT_NUMBERS,
 } from "@/config/registroFotografico";
-import type { FormReadItem } from "@/services/api";
+import { fetchFormFromApi, type FormReadItem } from "@/services/api";
 import type { HistorialForm, OfflineForm, PrecargaForm } from "@/services/db";
 import { REQUIRED_FIELDS, type FormValues } from "@/types/formFields";
 import {
@@ -265,32 +265,108 @@ function gpsPrecisionOrDefault(precision: number | null | undefined): number {
   return typeof precision === "number" && precision > 0 ? precision : 1;
 }
 
+/** Campos presentes en filas del listado `/forms/search` (resumen, no formulario completo). */
+export const SERVER_SEARCH_SUMMARY_DATOS_KEYS = new Set([
+  "nombres_apellidos_encuestado",
+  "municipio",
+  "fecha_visita",
+  "resultado_validacion",
+]);
+
+export function isServerSearchSummaryDatos(
+  datos: Record<string, unknown> | undefined,
+): boolean {
+  if (!datos) {
+    return true;
+  }
+  const keys = Object.keys(datos).filter((key) => {
+    const value = datos[key];
+    return value != null && String(value).trim() !== "";
+  });
+  if (keys.length === 0) {
+    return true;
+  }
+  return keys.every((key) => SERVER_SEARCH_SUMMARY_DATOS_KEYS.has(key));
+}
+
+function hasPrecargaDatos(precarga: PrecargaForm | null | undefined): boolean {
+  const datos = precarga?.datos_formulario;
+  return datos != null && Object.keys(datos).length > 0;
+}
+
 /**
  * Datos del formulario para exportar (Excel/ZIP masivo), alineado con la vista de detalle:
- * cola local en vivo > servidor > precarga > historial.
+ * cola local > precarga > servidor completo > historial > resumen de búsqueda.
  */
 export function resolveDatosFormularioForExport(
   row: DisplayRow,
   queued?: OfflineForm | null,
+  precarga?: PrecargaForm | null,
 ): Record<string, unknown> {
   if (queued?.datos_formulario) {
     return queued.datos_formulario;
   }
+  const precargaForm = precarga ?? row.precargaSolo ?? null;
+  if (hasPrecargaDatos(precargaForm)) {
+    return precargaForm!.datos_formulario!;
+  }
   const serverDatos = row.server?.datos_formulario;
+  const serverIsSummary =
+    serverDatos &&
+    typeof serverDatos === "object" &&
+    isServerSearchSummaryDatos(serverDatos as Record<string, unknown>);
+  if (serverDatos && typeof serverDatos === "object" && !serverIsSummary) {
+    return serverDatos as Record<string, unknown>;
+  }
+  if (!row.onServer || !row.server) {
+    const historialDatos = row.historial?.datos_formulario;
+    if (historialDatos && Object.keys(historialDatos).length > 0) {
+      return historialDatos;
+    }
+  }
   if (serverDatos && typeof serverDatos === "object") {
     return serverDatos as Record<string, unknown>;
   }
-  const precargaDatos = row.precargaSolo?.datos_formulario;
-  if (precargaDatos) {
-    return precargaDatos;
-  }
   return row.historial?.datos_formulario ?? {};
+}
+
+/**
+ * Completa datos parciales del listado de búsqueda con `GET /forms/{id}` cuando hace falta.
+ */
+export async function hydrateDatosFormularioForExportIfNeeded(
+  row: DisplayRow,
+  datos: Record<string, unknown>,
+  opts?: {
+    queued?: OfflineForm | null;
+    precarga?: PrecargaForm | null;
+  },
+): Promise<Record<string, unknown>> {
+  if (opts?.queued?.datos_formulario) {
+    return datos;
+  }
+  const precargaForm = opts?.precarga ?? row.precargaSolo ?? null;
+  if (hasPrecargaDatos(precargaForm)) {
+    return datos;
+  }
+  if (!isServerSearchSummaryDatos(datos)) {
+    return datos;
+  }
+  if (!row.server) {
+    return datos;
+  }
+  try {
+    const detail = await fetchFormFromApi(row.server.id_formulario);
+    return (detail.datos_formulario ?? {}) as Record<string, unknown>;
+  } catch {
+    return datos;
+  }
 }
 
 /** GPS para exportación masiva con la misma prioridad que `resolveDatosFormularioForExport`. */
 export function resolveGpsForExport(
   row: DisplayRow,
   queued?: OfflineForm | null,
+  precarga?: PrecargaForm | null,
 ): OfflineForm["gps"] {
   if (queued?.gps) {
     return {
@@ -299,19 +375,19 @@ export function resolveGpsForExport(
       precision: gpsPrecisionOrDefault(queued.gps.precision),
     };
   }
+  const precargaForm = precarga ?? row.precargaSolo ?? null;
+  if (precargaForm?.gps) {
+    return {
+      latitud: precargaForm.gps.latitud,
+      longitud: precargaForm.gps.longitud,
+      precision: gpsPrecisionOrDefault(precargaForm.gps.precision ?? undefined),
+    };
+  }
   if (row.server) {
     return {
       latitud: row.server.latitud,
       longitud: row.server.longitud,
       precision: gpsPrecisionOrDefault(row.server.precision),
-    };
-  }
-  const pg = row.precargaSolo?.gps;
-  if (pg) {
-    return {
-      latitud: pg.latitud,
-      longitud: pg.longitud,
-      precision: gpsPrecisionOrDefault(pg.precision ?? undefined),
     };
   }
   const hg = row.historial?.gps;

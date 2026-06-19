@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { FormReadItem } from "@/services/api";
 import type { HistorialForm, PrecargaForm } from "@/services/db";
@@ -11,6 +11,8 @@ import {
   getBeneficiarioDisplayName,
   getMissingBadgeForListRow,
   getMunicipioDisplayValue,
+  hydrateDatosFormularioForExportIfNeeded,
+  isServerSearchSummaryDatos,
   resolveDatosFormularioForExport,
   resolveGpsForExport,
   mapServerFotos,
@@ -20,6 +22,12 @@ import {
   rowsForOfflineAwareList,
   type DisplayRow,
 } from "@/services/formHistory";
+
+vi.mock("@/services/api", () => ({
+  fetchFormFromApi: vi.fn(),
+}));
+
+import { fetchFormFromApi } from "@/services/api";
 
 describe("coalesceIdPerfilEncuestador", () => {
   it("prioriza el primer id válido", () => {
@@ -162,6 +170,94 @@ describe("formHistory — beneficiario", () => {
       "2026-12-15",
     );
     expect(resolveGpsForExport(row, queued).latitud).toBe(3);
+  });
+
+  it("isServerSearchSummaryDatos detecta filas del listado /search", () => {
+    expect(
+      isServerSearchSummaryDatos({
+        nombres_apellidos_encuestado: "Ana",
+        municipio: "Popayán",
+        fecha_visita: "2026-01-01",
+        resultado_validacion: "Válido",
+      }),
+    ).toBe(true);
+    expect(
+      isServerSearchSummaryDatos({
+        nombres_apellidos_encuestado: "Ana",
+        vereda: "El centro",
+      }),
+    ).toBe(false);
+  });
+
+  it("resolveDatosFormularioForExport prioriza precarga sobre resumen del servidor", () => {
+    const precarga = {
+      id_formulario: "p-1",
+      fecha_precarga: "2026-01-01T00:00:00Z",
+      datos_formulario: { vereda: "Desde precarga", municipio: "Silvia" },
+      fotos: [],
+    } satisfies PrecargaForm;
+    const row: DisplayRow = {
+      id_formulario: "p-1",
+      onServer: true,
+      server: {
+        id_formulario: "p-1",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        fecha_actualizacion: "2026-01-01T00:00:00Z",
+        latitud: 0,
+        longitud: 0,
+        precision: 1,
+        datos_formulario: {
+          nombres_apellidos_encuestado: "Ana",
+          municipio: "Popayán",
+          fecha_visita: "2026-01-01",
+          resultado_validacion: "Válido",
+        },
+        fotos: [],
+      },
+    };
+    expect(resolveDatosFormularioForExport(row, null, precarga).vereda).toBe(
+      "Desde precarga",
+    );
+  });
+
+  it("hydrateDatosFormularioForExportIfNeeded obtiene detalle completo del API", async () => {
+    vi.mocked(fetchFormFromApi).mockResolvedValueOnce({
+      id_formulario: "srv-1",
+      fecha_hora: "2026-01-01T00:00:00Z",
+      fecha_actualizacion: "2026-01-01T00:00:00Z",
+      latitud: 1,
+      longitud: 2,
+      precision: 1,
+      datos_formulario: {
+        vereda: "Completa",
+        metros_sobre_nivel_mar: "2500",
+      },
+      fotos: [],
+    });
+    const row: DisplayRow = {
+      id_formulario: "srv-1",
+      onServer: true,
+      server: {
+        id_formulario: "srv-1",
+        fecha_hora: "2026-01-01T00:00:00Z",
+        fecha_actualizacion: "2026-01-01T00:00:00Z",
+        latitud: 1,
+        longitud: 2,
+        precision: 1,
+        datos_formulario: {
+          nombres_apellidos_encuestado: "Ana",
+          municipio: "Popayán",
+          fecha_visita: "2026-01-01",
+          resultado_validacion: "Válido",
+        },
+        fotos: [],
+      },
+    };
+    const summary = resolveDatosFormularioForExport(row);
+    const hydrated = await hydrateDatosFormularioForExportIfNeeded(row, summary);
+    expect(fetchFormFromApi).toHaveBeenCalledWith("srv-1");
+    expect(hydrated.vereda).toBe("Completa");
+    expect(hydrated.metros_sobre_nivel_mar).toBe("2500");
   });
 
   it("getBeneficiarioDisplayName usa servidor si no hay historial", () => {

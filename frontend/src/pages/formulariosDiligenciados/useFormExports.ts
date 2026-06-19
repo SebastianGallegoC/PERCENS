@@ -8,6 +8,7 @@ import {
   resolveDatosFormularioForExport,
   resolveGpsForExport,
   coalesceIdPerfilEncuestador,
+  hydrateDatosFormularioForExportIfNeeded,
 } from '@/services/formHistory';
 import {
   downloadMatrizCaracterizacionBulkXlsx,
@@ -186,14 +187,21 @@ export const useFormExports = ({
         }
       }
 
-      const exportables = rows.map((row) => {
+      const exportables = [];
+      for (const row of rows) {
         const queued = queuedById.get(row.id_formulario);
-        const datos = resolveDatosFormularioForExport(row, queued);
-        const gps = resolveGpsForExport(row, queued);
+        const precarga =
+          precargaById?.get(row.id_formulario) ?? row.precargaSolo ?? null;
+        let datos = resolveDatosFormularioForExport(row, queued, precarga);
+        datos = await hydrateDatosFormularioForExportIfNeeded(row, datos, {
+          queued,
+          precarga,
+        });
+        const gps = resolveGpsForExport(row, queued, precarga);
         const fotos = (
           queued?.fotos ??
           row.historial?.fotos ??
-          row.precargaSolo?.fotos ??
+          precarga?.fotos ??
           []
         ).filter(
           (f): f is FotoForm =>
@@ -201,27 +209,27 @@ export const useFormExports = ({
             f.data.trim() !== '' &&
             isRegistroFotoSlot(f.slot),
         );
-        return {
+        exportables.push({
           id_formulario: row.id_formulario,
           id_perfil_encuestador: coalesceIdPerfilEncuestador(
             queued?.id_perfil_encuestador,
             row.server?.id_perfil_encuestador,
             row.historial?.id_perfil_encuestador,
-            row.precargaSolo?.id_perfil_encuestador,
+            precarga?.id_perfil_encuestador,
           ),
           fecha_hora:
             queued?.fecha_hora ??
             row.server?.fecha_hora ??
             row.historial?.fecha_envio ??
             row.historial?.fecha_hora ??
-            row.precargaSolo?.fecha_precarga ??
+            precarga?.fecha_precarga ??
             new Date().toISOString(),
           gps,
           datos_formulario: datos,
           fotos,
           estado_sincronizacion: 'PENDIENTE' as const,
-        };
-      });
+        });
+      }
       await downloadMatrizCaracterizacionBulkXlsx(exportables);
     } catch (e) {
       setDescargaExcelError(
@@ -232,7 +240,7 @@ export const useFormExports = ({
     } finally {
       setDescargandoTodosExcel(false);
     }
-  }, [rows, setDescargaExcelError, setDescargandoTodosExcel]);
+  }, [precargaById, rows, setDescargaExcelError, setDescargandoTodosExcel]);
 
   const descargarFotosDeTodos = useCallback(async () => {
     setDescargaFotosError(null);
@@ -252,8 +260,8 @@ export const useFormExports = ({
         const queued = queuedById.get(row.id_formulario);
         const precarga =
           precargaById?.get(row.id_formulario) ?? row.precargaSolo ?? null;
-        const datos = resolveDatosFormularioForExport(row, queued);
-        const gps = resolveGpsForExport(row, queued);
+        const datos = resolveDatosFormularioForExport(row, queued, precarga);
+        const gps = resolveGpsForExport(row, queued, precarga);
         let fotos = fotosConSlotDesdeDetalleExport(
           (queued?.fotos ??
             row.historial?.fotos ??

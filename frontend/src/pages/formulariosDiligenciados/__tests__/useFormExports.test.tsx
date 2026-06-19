@@ -214,7 +214,7 @@ describe("useFormExports", () => {
         latitud: 1,
         longitud: 2,
         precision: 3,
-        datos_formulario: { fecha_visita: "2026-05-10" },
+        datos_formulario: { fecha_visita: "2026-05-10", vereda: "Centro" },
         fotos: [],
       },
       historial: {
