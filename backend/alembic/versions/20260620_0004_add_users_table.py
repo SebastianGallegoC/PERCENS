@@ -13,6 +13,8 @@ import os
 import bcrypt
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "20260620_0004"
@@ -21,7 +23,7 @@ branch_labels = None
 depends_on = None
 
 
-USER_ROLE_ENUM = sa.Enum(
+USER_ROLE_ENUM = postgresql.ENUM(
     "admin",
     "editor",
     "encuestador",
@@ -86,6 +88,11 @@ def _seed_admin_users() -> None:
 def upgrade() -> None:
     bind = op.get_bind()
     USER_ROLE_ENUM.create(bind, checkfirst=True)
+
+    inspector = inspect(bind)
+    if "users" in inspector.get_table_names():
+        return
+
     op.create_table(
         "users",
         sa.Column("id", sa.Integer(), nullable=False),
