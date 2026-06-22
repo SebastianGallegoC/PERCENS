@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { EditUserModal } from "@/components/users/EditUserModal";
+import { ConfirmDeleteUserModal } from "@/components/users/ConfirmDeleteUserModal";
 import { PasswordField } from "@/components/users/PasswordField";
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/constants/appBrand";
@@ -58,6 +59,7 @@ export const UsuariosPage = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftState>(EMPTY_DRAFT);
   const [editingUser, setEditingUser] = useState<UserRead | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserRead | null>(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -128,24 +130,27 @@ export const UsuariosPage = () => {
     [editingUser, loadUsers],
   );
 
-  const deleteEditedUser = useCallback(async () => {
-    if (!editingUser) {
+  const deleteUser = useCallback(async () => {
+    if (!deletingUser) {
       return;
     }
-    setEditError(null);
+    setError(null);
     setSaving(true);
     try {
-      await deleteUserApi(editingUser.id);
-      setEditingUser(null);
+      await deleteUserApi(deletingUser.id);
+      if (editingUser?.id === deletingUser.id) {
+        setEditingUser(null);
+      }
+      setDeletingUser(null);
       await loadUsers();
     } catch (e) {
-      setEditError(
+      setError(
         mapUserError(e instanceof Error ? e.message : "No se pudo eliminar el usuario."),
       );
     } finally {
       setSaving(false);
     }
-  }, [editingUser, loadUsers]);
+  }, [deletingUser, editingUser, loadUsers]);
 
   const closeEditModal = useCallback(() => {
     if (saving) {
@@ -255,18 +260,33 @@ export const UsuariosPage = () => {
                           ) : null}
                         </div>
                         {!isAdmin ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={saving}
-                            onClick={() => {
-                              setEditError(null);
-                              setEditingUser(user);
-                            }}
-                          >
-                            Editar
-                          </Button>
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={saving}
+                              onClick={() => {
+                                setEditError(null);
+                                setEditingUser(user);
+                              }}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={saving}
+                              onClick={() => {
+                                setError(null);
+                                setDeletingUser(user);
+                              }}
+                              className="border-rose-200 text-rose-800 hover:bg-rose-50"
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
                         ) : null}
                       </div>
                     </div>
@@ -284,7 +304,18 @@ export const UsuariosPage = () => {
         error={editError}
         onClose={closeEditModal}
         onSave={(updates) => void saveEditedUser(updates)}
-        onDelete={() => void deleteEditedUser()}
+      />
+
+      <ConfirmDeleteUserModal
+        open={deletingUser != null}
+        username={deletingUser?.username ?? ""}
+        confirming={saving}
+        onCancel={() => {
+          if (!saving) {
+            setDeletingUser(null);
+          }
+        }}
+        onConfirm={() => void deleteUser()}
       />
     </div>
   );

@@ -45,7 +45,14 @@ describe("InicioPage", () => {
     expect(
       screen.queryByRole("link", { name: /Perfil encuestador/i }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Cerrar sesión/i })).not.toBeInTheDocument();
     mockUseConnectivity.mockReturnValue(true);
+  });
+
+  it("muestra cerrar sesión solo en el menú principal cuando está online", async () => {
+    mockUseConnectivity.mockReturnValue(true);
+    await renderInicio();
+    expect(screen.getByRole("button", { name: /Cerrar sesión/i })).toBeInTheDocument();
   });
 
   it("muestra enlaces a Datos y Perfil encuestador cuando está online", async () => {

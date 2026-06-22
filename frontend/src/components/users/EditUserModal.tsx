@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { ConfirmDeleteUserModal } from "@/components/users/ConfirmDeleteUserModal";
 import { PasswordField } from "@/components/users/PasswordField";
 import { Button } from "@/components/ui/button";
 import { type UserRole } from "@/lib/permissions";
@@ -29,7 +28,6 @@ type Props = {
   error?: string | null;
   onClose: () => void;
   onSave: (updates: { role: UserRole; is_active: boolean; password?: string }) => void;
-  onDelete: () => void;
 };
 
 function draftFromUser(user: UserRead): EditDraft {
@@ -55,20 +53,16 @@ export function EditUserModal({
   error = null,
   onClose,
   onSave,
-  onDelete,
 }: Props) {
   const open = user != null;
   const [draft, setDraft] = useState<EditDraft | null>(null);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
       setDraft(null);
-      setConfirmDeleteOpen(false);
       return;
     }
     setDraft(draftFromUser(user));
-    setConfirmDeleteOpen(false);
   }, [user]);
 
   useEffect(() => {
@@ -83,7 +77,7 @@ export function EditUserModal({
   }, [open]);
 
   useEffect(() => {
-    if (!open || saving || confirmDeleteOpen) {
+    if (!open || saving) {
       return;
     }
     const onKey = (e: KeyboardEvent) => {
@@ -93,7 +87,7 @@ export function EditUserModal({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, saving, confirmDeleteOpen, onClose]);
+  }, [open, saving, onClose]);
 
   const hasChanges = useMemo(
     () => (user && draft ? hasDraftChanges(user, draft) : false),
@@ -118,8 +112,7 @@ export function EditUserModal({
   const passwordInvalid = draft.password.length > 0 && draft.password.length < 8;
 
   return (
-    <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
         <button
           type="button"
           className="absolute inset-0 bg-slate-900/45 backdrop-blur-[1px]"
@@ -209,46 +202,19 @@ export function EditUserModal({
 
           {error ? <p className="mt-3 text-sm text-rose-700">{error}</p> : null}
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-6 flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
+              Cancelar
+            </Button>
             <Button
               type="button"
-              variant="outline"
-              disabled={saving}
-              onClick={() => setConfirmDeleteOpen(true)}
-              className="border-rose-200 text-rose-800 hover:bg-rose-50"
+              disabled={saving || !hasChanges || passwordInvalid}
+              onClick={handleSave}
             >
-              Eliminar
+              {saving ? "Actualizando…" : "Actualizar"}
             </Button>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                disabled={saving || !hasChanges || passwordInvalid}
-                onClick={handleSave}
-              >
-                {saving ? "Actualizando…" : "Actualizar"}
-              </Button>
-            </div>
           </div>
         </div>
-      </div>
-
-      <ConfirmDeleteUserModal
-        open={confirmDeleteOpen}
-        username={user.username}
-        confirming={saving}
-        onCancel={() => {
-          if (!saving) {
-            setConfirmDeleteOpen(false);
-          }
-        }}
-        onConfirm={() => {
-          setConfirmDeleteOpen(false);
-          onDelete();
-        }}
-      />
-    </>
+    </div>
   );
 }

@@ -87,7 +87,6 @@ describe("UsuariosPage", () => {
 
     fireEvent.click(screen.getByLabelText("Usuario activo"));
     expect(updateButton).toBeEnabled();
-    expect(screen.getByRole("button", { name: /^Eliminar$/i })).toBeInTheDocument();
   });
 
   it("muestra confirmación antes de eliminar un usuario", async () => {
@@ -101,7 +100,6 @@ describe("UsuariosPage", () => {
       expect(screen.getByText("encuestador1")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /^Editar$/i }));
     fireEvent.click(screen.getByRole("button", { name: /^Eliminar$/i }));
 
     expect(screen.getByRole("heading", { name: /¿Eliminar usuario\?/i })).toBeInTheDocument();

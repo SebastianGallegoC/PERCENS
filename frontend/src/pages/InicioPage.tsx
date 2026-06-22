@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BarChart3, ClipboardList, Download, FileSpreadsheet, ShieldUser, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { OnlineLogoutButton } from "@/components/auth/OnlineLogoutButton";
 import { APP_NAME } from "@/constants/appBrand";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useConnectivityStatus } from "@/hooks/useConnectivityStatus";
@@ -51,15 +52,20 @@ export const InicioPage = () => {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#e2f2ee_0,_#f6f7f5_45%,_#f6f7f5_100%)] px-3 py-4 text-slate-900 sm:px-4 sm:py-10">
       <div className="mx-auto w-full max-w-4xl">
         <header className="mb-4 sm:mb-8">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-teal-700 sm:text-xs sm:tracking-[0.35em]">
-            {APP_NAME}
-          </p>
-          <h1 className="mt-1 text-xl font-semibold leading-tight text-foreground sm:mt-2 sm:text-3xl sm:leading-normal">
-            Selecciona una opción
-          </h1>
-          <p className="mt-1 text-xs leading-snug text-muted-foreground sm:mt-2 sm:text-sm sm:leading-normal">
-            Puedes diligenciar una nueva encuesta o revisar las ya registradas.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-teal-700 sm:text-xs sm:tracking-[0.35em]">
+                {APP_NAME}
+              </p>
+              <h1 className="mt-1 text-xl font-semibold leading-tight text-foreground sm:mt-2 sm:text-3xl sm:leading-normal">
+                Selecciona una opción
+              </h1>
+              <p className="mt-1 text-xs leading-snug text-muted-foreground sm:mt-2 sm:text-sm sm:leading-normal">
+                Puedes diligenciar una nueva encuesta o revisar las ya registradas.
+              </p>
+            </div>
+            <OnlineLogoutButton />
+          </div>
         </header>
 
         <section
