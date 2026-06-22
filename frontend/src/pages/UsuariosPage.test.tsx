@@ -59,12 +59,31 @@ describe("UsuariosPage", () => {
     expect(screen.queryByRole("option", { name: /Administrador/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Confirmar contraseña")).not.toBeInTheDocument();
     expect(screen.getByText(/Cuenta administrador protegida/i)).toBeInTheDocument();
-    expect(screen.getAllByLabelText("Nueva contraseña")).toHaveLength(1);
+    expect(screen.queryByLabelText("Nueva contraseña (opcional)")).not.toBeInTheDocument();
 
     const createPassword = screen.getByLabelText("Contraseña");
     expect(createPassword).toHaveAttribute("type", "password");
 
     fireEvent.click(screen.getAllByRole("button", { name: /Mostrar contraseña/i })[0]!);
     expect(createPassword).toHaveAttribute("type", "text");
+  });
+
+  it("abre el modal de edición al pulsar Editar", async () => {
+    render(
+      <MemoryRouter>
+        <UsuariosPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("encuestador1")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Editar$/i }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Editar usuario/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Nueva contraseña (opcional)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Guardar cambios/i })).toBeInTheDocument();
   });
 });

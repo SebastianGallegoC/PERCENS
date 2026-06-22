@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { EditUserModal } from "@/components/users/EditUserModal";
+import { PasswordField } from "@/components/users/PasswordField";
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/constants/appBrand";
 import { type UserRole } from "@/lib/permissions";
@@ -47,49 +49,14 @@ function mapUserError(message: string): string {
   }
 }
 
-type PasswordFieldProps = {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-};
-
-const PasswordField = ({ id, label, value, onChange, placeholder }: PasswordFieldProps) => {
-  const [visible, setVisible] = useState(false);
-
-  return (
-    <label className="flex flex-col gap-1 text-sm" htmlFor={id}>
-      {label}
-      <div className="relative">
-        <input
-          id={id}
-          type={visible ? "text" : "password"}
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 pr-16 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-        />
-        <button
-          type="button"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
-          aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
-          onClick={() => setVisible((current) => !current)}
-        >
-          {visible ? "Ocultar" : "Ver"}
-        </button>
-      </div>
-    </label>
-  );
-};
-
 export const UsuariosPage = () => {
   const [users, setUsers] = useState<UserRead[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftState>(EMPTY_DRAFT);
-  const [rowPasswords, setRowPasswords] = useState<Record<number, string>>({});
+  const [editingUser, setEditingUser] = useState<UserRead | null>(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -138,24 +105,35 @@ export const UsuariosPage = () => {
     }
   }, [draft, loadUsers]);
 
-  const updateUser = useCallback(
-    async (user: UserRead, updates: { role?: UserRole; is_active?: boolean; password?: string }) => {
-      setError(null);
+  const saveEditedUser = useCallback(
+    async (updates: { role: UserRole; is_active: boolean; password?: string }) => {
+      if (!editingUser) {
+        return;
+      }
+      setEditError(null);
       setSaving(true);
       try {
-        await updateUserApi(user.id, updates);
-        setRowPasswords((current) => ({ ...current, [user.id]: "" }));
+        await updateUserApi(editingUser.id, updates);
+        setEditingUser(null);
         await loadUsers();
       } catch (e) {
-        setError(
+        setEditError(
           mapUserError(e instanceof Error ? e.message : "No se pudo actualizar el usuario."),
         );
       } finally {
         setSaving(false);
       }
     },
-    [loadUsers],
+    [editingUser, loadUsers],
   );
+
+  const closeEditModal = useCallback(() => {
+    if (saving) {
+      return;
+    }
+    setEditingUser(null);
+    setEditError(null);
+  }, [saving]);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#e2f2ee_0,_#f6f7f5_45%,_#f6f7f5_100%)] px-3 py-4 text-slate-900 sm:px-4 sm:py-10">
@@ -211,6 +189,7 @@ export const UsuariosPage = () => {
               id="create-user-password"
               label="Contraseña"
               value={draft.password}
+              disabled={saving}
               onChange={(password) => setDraft((current) => ({ ...current, password }))}
             />
             <Button type="button" disabled={saving} onClick={() => void createUser()}>
@@ -244,6 +223,9 @@ export const UsuariosPage = () => {
                         <div>
                           <p className="font-semibold text-slate-900">{user.username}</p>
                           <p className="text-xs text-slate-600">
+                            Rol: {ROLE_LABELS[user.role]}
+                          </p>
+                          <p className="text-xs text-slate-600">
                             Estado: {user.is_active ? "Activo" : "Inactivo"}
                           </p>
                           {isAdmin ? (
@@ -252,71 +234,21 @@ export const UsuariosPage = () => {
                             </p>
                           ) : null}
                         </div>
-                        {isAdmin ? (
-                          <span className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700">
-                            {ROLE_LABELS.admin}
-                          </span>
-                        ) : (
-                          <select
-                            value={user.role}
-                            onChange={(e) =>
-                              void updateUser(user, { role: e.target.value as UserRole })
-                            }
-                            className="rounded-lg border border-slate-200 px-2 py-1 text-sm"
+                        {!isAdmin ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
                             disabled={saving}
+                            onClick={() => {
+                              setEditError(null);
+                              setEditingUser(user);
+                            }}
                           >
-                            {CREATE_ROLE_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        )}
+                            Editar
+                          </Button>
+                        ) : null}
                       </div>
-
-                      {!isAdmin ? (
-                        <>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              disabled={saving}
-                              onClick={() =>
-                                void updateUser(user, { is_active: !user.is_active })
-                              }
-                            >
-                              {user.is_active ? "Desactivar" : "Activar"}
-                            </Button>
-                          </div>
-
-                          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
-                            <div className="min-w-0 flex-1">
-                              <PasswordField
-                                id={`reset-password-${user.id}`}
-                                label="Nueva contraseña"
-                                placeholder="Nueva contraseña"
-                                value={rowPasswords[user.id] ?? ""}
-                                onChange={(password) =>
-                                  setRowPasswords((current) => ({
-                                    ...current,
-                                    [user.id]: password,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              disabled={saving || (rowPasswords[user.id] ?? "").length < 8}
-                              onClick={() =>
-                                void updateUser(user, { password: rowPasswords[user.id] ?? "" })
-                              }
-                            >
-                              Restablecer contraseña
-                            </Button>
-                          </div>
-                        </>
-                      ) : null}
                     </div>
                   );
                 })}
@@ -325,6 +257,14 @@ export const UsuariosPage = () => {
           </section>
         </div>
       </div>
+
+      <EditUserModal
+        user={editingUser}
+        saving={saving}
+        error={editError}
+        onClose={closeEditModal}
+        onSave={(updates) => void saveEditedUser(updates)}
+      />
     </div>
   );
 };
