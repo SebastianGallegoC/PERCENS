@@ -21,6 +21,7 @@ import {
 import { formatCuentaConCocinaForStorage } from "@/lib/cuentaConCocina";
 import { formatDatosEncuestadoForStorage } from "@/lib/datosEncuestado";
 import { applyDistanciaSeguridadRule } from "@/lib/distanciaSeguridadValidacion";
+import { normalizeVeredaForStorage } from "@/lib/veredaNormalize";
 import {
   formatCoordForDatosFormulario,
   normalizeCoordNumericCell,
@@ -84,6 +85,10 @@ export const buildDatosFormulario = (
       continue;
     }
     if (key === "id_perfil_encuestador") {
+      continue;
+    }
+    if (key === "vereda") {
+      datos_formulario[key] = normalizeVeredaForStorage(String(values[key] ?? ""));
       continue;
     }
     datos_formulario[key] = values[key];

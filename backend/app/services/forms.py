@@ -1,4 +1,5 @@
 from datetime import datetime
+import unicodedata
 
 from geoalchemy2 import WKTElement
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,6 +57,22 @@ def _apply_distancia_seguridad_rule(normalized: dict[str, object]) -> None:
     normalized["resultado_validacion"] = "NO CUMPLE"
 
 
+def _strip_accents(value: str) -> str:
+    decomposed = unicodedata.normalize("NFD", value)
+    return "".join(
+        char for char in decomposed if unicodedata.category(char) != "Mn"
+    )
+
+
+def _normalize_vereda(raw: object) -> str | None:
+    if not isinstance(raw, str):
+        return None
+    trimmed = raw.strip()
+    if not trimmed:
+        return ""
+    return _strip_accents(trimmed).upper()
+
+
 def normalize_datos_formulario_for_persist(
     datos_formulario: dict[str, object],
 ) -> dict[str, object]:
@@ -63,6 +80,9 @@ def normalize_datos_formulario_for_persist(
     normalized_fecha_visita = _normalize_fecha_visita(normalized.get("fecha_visita"))
     if normalized_fecha_visita is not None:
         normalized["fecha_visita"] = normalized_fecha_visita
+    normalized_vereda = _normalize_vereda(normalized.get("vereda"))
+    if normalized_vereda is not None:
+        normalized["vereda"] = normalized_vereda
     _apply_distancia_seguridad_rule(normalized)
     return normalized
 

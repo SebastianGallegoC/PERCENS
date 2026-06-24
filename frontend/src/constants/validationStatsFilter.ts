@@ -20,34 +20,34 @@ export const CUMPLE_DETALLE_LABELS = {
 
 export type CumpleDetalleKey = keyof typeof CUMPLE_DETALLE_LABELS;
 
-/** Paleta alineada con el verde del logo PERCENS. */
+/** Colores de alto contraste entre categorías (evitar varias tonalidades de verde). */
 export const CUMPLE_DETALLE_THEME: Record<
   CumpleDetalleKey,
   { chart: string; bg: string; border: string; text: string }
 > = {
   sin_servicio_energia: {
-    chart: "#A4D44D",
-    bg: "rgba(164, 212, 77, 0.22)",
-    border: "#8BB83A",
-    text: "#3F5F14",
+    chart: "#EAB308",
+    bg: "rgba(234, 179, 8, 0.16)",
+    border: "#CA8A04",
+    text: "#713F12",
   },
   servicio_irregular_directo: {
-    chart: "#2E9E47",
-    bg: "rgba(46, 158, 71, 0.18)",
-    border: "#2E9E47",
-    text: "#14532D",
+    chart: "#2563EB",
+    bg: "rgba(37, 99, 235, 0.12)",
+    border: "#2563EB",
+    text: "#1E3A8A",
   },
   servicio_irregular_indirecto: {
-    chart: "#1B7C3E",
-    bg: "rgba(27, 124, 62, 0.16)",
-    border: "#1B7C3E",
-    text: "#14532D",
+    chart: "#9333EA",
+    bg: "rgba(147, 51, 234, 0.12)",
+    border: "#9333EA",
+    text: "#581C87",
   },
   sin_clasificar: {
-    chart: "#7A9E82",
-    bg: "rgba(122, 158, 130, 0.18)",
-    border: "#94A89A",
-    text: "#3F4F45",
+    chart: "#64748B",
+    bg: "rgba(100, 116, 139, 0.14)",
+    border: "#94A3B8",
+    text: "#334155",
   },
 };
 

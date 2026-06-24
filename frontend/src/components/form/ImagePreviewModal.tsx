@@ -51,7 +51,7 @@ export const ImagePreviewModal = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
       <button
         type="button"
         className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm"

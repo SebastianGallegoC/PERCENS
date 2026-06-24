@@ -200,6 +200,20 @@ def test_normalize_datos_formulario_for_persist():
     assert normalized["fecha_visita"] == "2026-06-03"
 
 
+def test_normalize_datos_formulario_normaliza_vereda():
+    normalized = normalize_datos_formulario_for_persist(
+        {
+            "vereda": "  la esperanza  ",
+        }
+    )
+    assert normalized["vereda"] == "LA ESPERANZA"
+
+    normalized_accent = normalize_datos_formulario_for_persist(
+        {"vereda": "Peñas Blancas"},
+    )
+    assert normalized_accent["vereda"] == "PENAS BLANCAS"
+
+
 def test_normalize_datos_formulario_fuerza_no_cumple_si_distancia_seguridad_no():
     normalized = normalize_datos_formulario_for_persist(
         {

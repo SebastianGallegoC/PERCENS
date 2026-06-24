@@ -68,6 +68,15 @@ describe("useFormularioSubmit helpers", () => {
     expect(data.cuenta_con_cocina_otro).toBe("");
   });
 
+  it("buildDatosFormulario normaliza vereda al enviar", () => {
+    const values = buildEmptyValues();
+    values.vereda = "  El Cañón  ";
+
+    const data = buildDatosFormulario(values, REQUIRED_FIELDS);
+
+    expect(data.vereda).toBe("EL CANON");
+  });
+
   it("buildOfflinePayload limita precision GPS", () => {
     const values = buildEmptyValues();
     values.fecha_visita = "2026-05-01";
