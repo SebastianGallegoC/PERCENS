@@ -73,6 +73,7 @@ async def list_form_map_points(
             fecha_visita_col.label("fecha_visita"),
             _json_text("nombres_apellidos_encuestado").label("nombres_apellidos_encuestado"),
             _json_text("resultado_validacion").label("resultado_validacion"),
+            _json_text("informacion_vivienda").label("informacion_vivienda"),
         )
         .select_from(FormRecord)
     )
@@ -104,6 +105,7 @@ async def list_form_map_points(
                     row.get("nombres_apellidos_encuestado") or ""
                 ).strip(),
                 resultado_validacion=str(row.get("resultado_validacion") or "").strip(),
+                informacion_vivienda=str(row.get("informacion_vivienda") or "").strip(),
             )
         )
     return items

@@ -12,6 +12,7 @@ function samplePoint(id: string, lat: number, lng: number): FormMapPointItem {
     fecha_visita: "2026-06-01",
     nombres_apellidos_encuestado: "Encuestado",
     resultado_validacion: "CUMPLE",
+    informacion_vivienda: "",
   };
 }
 

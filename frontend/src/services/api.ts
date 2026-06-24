@@ -319,6 +319,7 @@ export interface FormMapPointItem {
   fecha_visita: string;
   nombres_apellidos_encuestado: string;
   resultado_validacion: string;
+  informacion_vivienda: string;
 }
 
 export interface FormMapPointsFiltersApplied {

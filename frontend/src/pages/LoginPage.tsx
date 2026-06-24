@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
+import { PasswordField } from '@/components/users/PasswordField';
 import { Button } from '@/components/ui/button';
 import { APP_NAME } from '@/constants/appBrand';
 import { isAccessTokenValid } from '@/lib/jwt';
@@ -67,17 +68,14 @@ export const LoginPage = () => {
               required
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-slate-800">
-            Contraseña
-            <input
-              type="password"
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
+          <PasswordField
+            id="login-password"
+            label="Contraseña"
+            value={password}
+            autoComplete="current-password"
+            onChange={setPassword}
+            disabled={loading}
+          />
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           <Button type="submit" disabled={loading} className="bg-slate-900 text-white hover:bg-slate-800">
             {loading ? 'Ingresando…' : 'Entrar'}

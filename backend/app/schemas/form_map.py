@@ -46,6 +46,7 @@ class FormMapPointItem(BaseModel):
     fecha_visita: str = ""
     nombres_apellidos_encuestado: str = ""
     resultado_validacion: str = ""
+    informacion_vivienda: str = ""
 
 
 class FormMapPointsResponse(BaseModel):

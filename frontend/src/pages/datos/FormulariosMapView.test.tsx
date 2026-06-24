@@ -88,6 +88,7 @@ describe("FormulariosMapView", () => {
             fecha_visita: "2026-06-01",
             nombres_apellidos_encuestado: "Ana",
             resultado_validacion: "CUMPLE",
+            informacion_vivienda: "SIN SERVICIO DE ENERGIA",
           },
         ]}
         total={1}

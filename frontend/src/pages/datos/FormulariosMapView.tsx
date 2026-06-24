@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 
-import { municipioFilterLabel } from "@/constants/formStatsMunicipio";
 import type { FormMapPointItem } from "@/services/api";
 import { spreadMapPoints } from "@/pages/datos/mapPointSpread";
+import { MapPointDetailModal } from "@/pages/datos/MapPointDetailModal";
 
 function isMapUsable(map: L.Map): boolean {
   try {
@@ -67,28 +67,13 @@ function createMarkerIcon(resultado: string): L.DivIcon {
   });
 }
 
-function createPopupContent(point: FormMapPointItem): HTMLElement {
-  const container = document.createElement("div");
-  const title = document.createElement("strong");
-  title.textContent = point.nombres_apellidos_encuestado || "Sin nombre registrado";
-  container.appendChild(title);
-
-  const municipio = document.createElement("div");
-  municipio.textContent = `Municipio: ${municipioFilterLabel(point.municipio)}`;
-  container.appendChild(municipio);
-
-  const fecha = document.createElement("div");
-  fecha.textContent = `Fecha visita: ${point.fecha_visita || "Sin fecha"}`;
-  container.appendChild(fecha);
-
-  const resultado = document.createElement("div");
-  resultado.textContent = `Resultado: ${point.resultado_validacion || "Sin resultado"}`;
-  container.appendChild(resultado);
-
-  return container;
-}
-
-function MapMarkers({ points }: { points: FormMapPointItem[] }) {
+function MapMarkers({
+  points,
+  onSelectPoint,
+}: {
+  points: FormMapPointItem[];
+  onSelectPoint: (point: FormMapPointItem) => void;
+}) {
   const map = useMap();
   const displayPoints = useMemo(() => spreadMapPoints(points), [points]);
 
@@ -99,7 +84,9 @@ function MapMarkers({ points }: { points: FormMapPointItem[] }) {
       const marker = L.marker([point.displayLat, point.displayLng], {
         icon: createMarkerIcon(point.resultado_validacion),
       });
-      marker.bindPopup(createPopupContent(point));
+      marker.on("click", () => {
+        onSelectPoint(point);
+      });
       layerGroup.addLayer(marker);
     }
 
@@ -112,7 +99,7 @@ function MapMarkers({ points }: { points: FormMapPointItem[] }) {
         map.removeLayer(layerGroup);
       });
     };
-  }, [displayPoints, map]);
+  }, [displayPoints, map, onSelectPoint]);
 
   return null;
 }
@@ -208,6 +195,7 @@ export const FormulariosMapView = ({
   sectionOpen = true,
 }: FormulariosMapViewProps) => {
   const mapMountKeyRef = useRef(0);
+  const [selectedPoint, setSelectedPoint] = useState<FormMapPointItem | null>(null);
 
   useEffect(() => {
     if (sectionOpen) {
@@ -311,7 +299,7 @@ export const FormulariosMapView = ({
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapInvalidateSizeOnMount />
-            <MapMarkers points={points} />
+            <MapMarkers points={points} onSelectPoint={setSelectedPoint} />
             <MapFitBoundsOnce points={points} />
           </MapContainer>
         ) : (
@@ -320,6 +308,16 @@ export const FormulariosMapView = ({
           </div>
         )}
       </div>
+
+      <p className="mt-3 text-xs text-slate-500">
+        Colores: verde (cumple), rojo (no cumple), gris (sin resultado). Tocá un punto
+        para ver fotos e información de la vivienda.
+      </p>
+
+      <MapPointDetailModal
+        point={selectedPoint}
+        onClose={() => setSelectedPoint(null)}
+      />
     </div>
   );
 };

@@ -87,6 +87,7 @@ describe("DatosPage", () => {
           fecha_visita: "2026-06-15",
           nombres_apellidos_encuestado: "Ana Perez",
           resultado_validacion: "CUMPLE",
+          informacion_vivienda: "",
         },
       ],
       total: 1,
