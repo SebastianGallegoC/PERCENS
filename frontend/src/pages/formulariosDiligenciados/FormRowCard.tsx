@@ -125,7 +125,7 @@ export const FormRowCard = ({
               Encuestado: {tituloUsuario}
             </p>
             <p className="text-xs leading-snug text-slate-600 sm:text-sm sm:leading-normal">
-              Fecha de envío del formulario: {tituloFechaLabel}
+              Fecha del formulario: {tituloFechaLabel}
             </p>
             <p className="text-xs leading-snug text-slate-600 sm:text-sm sm:leading-normal">
               Última actualización: {ultimaActualizacionLabel}

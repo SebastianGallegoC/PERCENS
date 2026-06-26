@@ -10,6 +10,23 @@ const DATE_TIME_FORMATTER_NO_SECONDS = new Intl.DateTimeFormat('es-CO', {
   timeZone: 'America/Bogota',
 });
 
+/** Formatea `YYYY-MM-DD` como fecha calendario (sin hora). */
+export function formatIsoCalendarDate(isoDay: string | null | undefined): string {
+  if (isoDay == null || isoDay.trim() === "") {
+    return "—";
+  }
+  const trimmed = isoDay.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return "—";
+  }
+  const [y, m, d] = trimmed.split("-").map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  return new Intl.DateTimeFormat("es-CO", {
+    dateStyle: "short",
+    timeZone: "UTC",
+  }).format(utc);
+}
+
 export function formatDateTime(value: string | number | Date | null | undefined): string {
   if (value == null || value === '') {
     return '—';

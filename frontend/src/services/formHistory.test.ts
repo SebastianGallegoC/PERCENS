@@ -9,6 +9,8 @@ import {
   collectMunicipiosFromRows,
   filterDisplayRowsWithPrecarga,
   getBeneficiarioDisplayName,
+  getFechaReferenciaEnvio,
+  getFechaVisitaIsoFromRow,
   getMissingBadgeForListRow,
   getMunicipioDisplayValue,
   hydrateDatosFormularioForExportIfNeeded,
@@ -753,6 +755,48 @@ describe("filtros de listado diligenciados", () => {
       datos_formulario: datos,
       fotos: [],
     },
+  });
+
+  it("getFechaVisitaIsoFromRow usa fecha_visita del formulario", () => {
+    const row = serverRow(
+      "f-1",
+      {
+        fecha_visita: "2026-06-15",
+        nombres_apellidos_encuestado: "Ana",
+      },
+      "2026-06-19T22:30:00.000Z",
+    );
+    expect(getFechaVisitaIsoFromRow(row)).toBe("2026-06-15");
+  });
+
+  it("getFechaReferenciaEnvio prioriza fecha_visita sobre fecha_hora", () => {
+    const row = serverRow(
+      "f-1",
+      { fecha_visita: "2026-06-15" },
+      "2026-06-19T22:30:00.000Z",
+    );
+    const ref = getFechaReferenciaEnvio(row);
+    expect(ref).toBe(new Date(2026, 5, 15, 0, 0, 0, 0).getTime());
+  });
+
+  it("matchesDisplayRowFilters filtra por fecha_visita", () => {
+    const row = serverRow(
+      "f-1",
+      { fecha_visita: "2026-06-15" },
+      "2026-06-19T22:30:00.000Z",
+    );
+    expect(
+      matchesDisplayRowFilters(row, {
+        desde: "2026-06-01",
+        hasta: "2026-06-30",
+      }),
+    ).toBe(true);
+    expect(
+      matchesDisplayRowFilters(row, {
+        desde: "2026-07-01",
+        hasta: "2026-07-31",
+      }),
+    ).toBe(false);
   });
 
   it("matchesDisplayRowFilters filtra por municipio en filas locales", () => {

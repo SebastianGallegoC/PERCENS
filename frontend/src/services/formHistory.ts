@@ -1,7 +1,6 @@
 import type { FormularioSnapshot } from "@/components/form/FormularioRespuestaReadOnly";
 import { applyCuentaConCocinaToFormValues } from "@/lib/cuentaConCocina";
 import { applyDatosEncuestadoToFormValues } from "@/lib/datosEncuestado";
-import { parseISODate } from "@/lib/formatDateTime";
 import {
   isRegistroFotoSlot,
   REGISTRO_FOTO_SLOT_NUMBERS,
@@ -242,21 +241,58 @@ export function mapServerFotos(
   });
 }
 
+function fechaVisitaFromDatos(
+  datos: Record<string, unknown> | undefined,
+): string {
+  if (!datos) {
+    return "";
+  }
+  const raw = datos.fecha_visita;
+  if (typeof raw !== "string") {
+    return "";
+  }
+  const trimmed = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+    const [dd, mm, yyyy] = trimmed.split("/");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return "";
+}
+
+/** Fecha de visita del formulario (`datos_formulario.fecha_visita`), solo día calendario. */
+export function getFechaVisitaIsoFromRow(row: DisplayRow): string {
+  const fromServer = fechaVisitaFromDatos(
+    row.server?.datos_formulario as Record<string, unknown> | undefined,
+  );
+  if (fromServer) {
+    return fromServer;
+  }
+  const fromPrecarga = fechaVisitaFromDatos(row.precargaSolo?.datos_formulario);
+  if (fromPrecarga) {
+    return fromPrecarga;
+  }
+  return fechaVisitaFromDatos(
+    row.historial?.datos_formulario as Record<string, unknown> | undefined,
+  );
+}
+
 export function getFechaReferenciaEnvio(row: DisplayRow): number {
+  const visita = getFechaVisitaIsoFromRow(row);
+  if (visita) {
+    return parseFiltroDiaInicio(visita);
+  }
   const h = row.historial;
   const s = row.server;
-  // Servidor: fecha_hora = primer registro en BD (no cambia en ediciones).
-  if (s?.fecha_hora) {
-    return parseISODate(s.fecha_hora);
-  }
-  if (h?.fecha_envio) {
-    return parseISODate(h.fecha_envio);
-  }
-  if (h?.fecha_hora) {
-    return parseISODate(h.fecha_hora);
-  }
-  if (row.precargaSolo?.fecha_precarga) {
-    return parseISODate(row.precargaSolo.fecha_precarga);
+  const isoFallback =
+    (s?.fecha_hora?.trim().slice(0, 10) ?? "") ||
+    (h?.fecha_envio?.trim().slice(0, 10) ?? "") ||
+    (h?.fecha_hora?.trim().slice(0, 10) ?? "") ||
+    (row.precargaSolo?.fecha_precarga?.trim().slice(0, 10) ?? "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoFallback)) {
+    return parseFiltroDiaInicio(isoFallback);
   }
   return NaN;
 }
@@ -503,7 +539,7 @@ export function hasActiveDisplayRowFilters(
   );
 }
 
-/** Filtro de listado (nombre, municipio, fecha de envío) para filas locales o modo offline. */
+/** Filtro de listado (nombre, municipio, fecha del formulario / fecha_visita). */
 export function matchesDisplayRowFilters(
   row: DisplayRow,
   filters: DisplayRowFilterCriteria,

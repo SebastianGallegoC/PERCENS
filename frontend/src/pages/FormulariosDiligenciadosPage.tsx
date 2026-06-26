@@ -17,6 +17,7 @@ import { ACCESS_TOKEN_KEY } from "@/lib/authStorage";
 import { isRegistroFotoSlot } from "@/config/registroFotografico";
 import {
   formatDateTimeNoSeconds,
+  formatIsoCalendarDate,
   formatISODateTimeForDisplay,
 } from "@/lib/formatDateTime";
 import {
@@ -44,7 +45,7 @@ import {
   coalesceIdPerfilEncuestador,
   collectMunicipiosFromRows,
   getBeneficiarioDisplayName,
-  getFechaReferenciaEnvio,
+  getFechaVisitaIsoFromRow,
   getMissingBadgeForListRow,
   mapServerFotos,
   mergeFormsWithPrecargas,
@@ -1509,8 +1510,9 @@ export const FormulariosDiligenciadosPage = () => {
               const precargado = !!precarga;
               const nombreBenef = getBeneficiarioDisplayName(row);
               const tituloUsuario = nombreBenef || "No diligenciado";
-              const refTs = getFechaReferenciaEnvio(row);
-              const tituloFechaLabel = formatDateTimeNoSeconds(refTs);
+              const tituloFechaLabel = formatIsoCalendarDate(
+                getFechaVisitaIsoFromRow(row),
+              );
               const ultimaActualizacionIso =
                 row.server?.fecha_actualizacion ??
                 row.historial?.fecha_actualizacion ??
@@ -1594,7 +1596,7 @@ export const FormulariosDiligenciadosPage = () => {
                           Encuestado: {tituloUsuario}
                         </p>
                         <p className="text-xs leading-snug text-slate-600 sm:text-sm sm:leading-normal">
-                          Fecha de envío del formulario: {tituloFechaLabel}
+                          Fecha del formulario: {tituloFechaLabel}
                         </p>
                         <p className="text-xs leading-snug text-slate-600 sm:text-sm sm:leading-normal">
                           Última actualización: {ultimaActualizacionLabel}

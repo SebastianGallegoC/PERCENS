@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { earliestIso } from "./formatDateTime";
+import { earliestIso, formatIsoCalendarDate } from "./formatDateTime";
+
+describe("formatIsoCalendarDate", () => {
+  it("formatea YYYY-MM-DD sin hora", () => {
+    expect(formatIsoCalendarDate("2026-03-15")).toMatch(/15/);
+    expect(formatIsoCalendarDate("2026-03-15")).not.toMatch(/:/);
+  });
+
+  it("devuelve guión si la fecha no es válida", () => {
+    expect(formatIsoCalendarDate("")).toBe("—");
+    expect(formatIsoCalendarDate("invalid")).toBe("—");
+  });
+});
 
 describe("earliestIso", () => {
   it("elige la fecha más temprana", () => {

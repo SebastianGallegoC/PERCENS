@@ -69,7 +69,7 @@ export const FiltersPanel = ({
 
       <div className="mt-4 border-t border-slate-100 pt-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-          Fecha de envío / del formulario
+          Fecha del formulario
         </h3>
         <div className="mt-3 grid min-w-0 grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end">
           <label className="flex min-w-0 max-w-full flex-col text-xs font-medium text-slate-700 sm:min-w-[10rem] sm:flex-1">

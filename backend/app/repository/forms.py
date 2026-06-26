@@ -1,5 +1,4 @@
 import json
-from datetime import date as date_type
 
 from geoalchemy2.functions import ST_AsGeoJSON
 from sqlalchemy import String, cast, func, select
@@ -145,12 +144,20 @@ async def search_forms_summary(
         filters.append(municipio_col == municipio_norm)
 
     if fecha_desde:
-        filters.append(
-            func.date(FormRecord.fecha_hora) >= date_type.fromisoformat(fecha_desde),
+        filters.extend(
+            [
+                fecha_visita_col.isnot(None),
+                fecha_visita_col != "",
+                fecha_visita_col >= fecha_desde,
+            ]
         )
     if fecha_hasta:
-        filters.append(
-            func.date(FormRecord.fecha_hora) <= date_type.fromisoformat(fecha_hasta),
+        filters.extend(
+            [
+                fecha_visita_col.isnot(None),
+                fecha_visita_col != "",
+                fecha_visita_col <= fecha_hasta,
+            ]
         )
 
     count_stmt = select(func.count()).select_from(FormRecord)
