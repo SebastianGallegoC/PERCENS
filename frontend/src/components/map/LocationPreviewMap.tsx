@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, Circle, Marker, useMap } from 'react-leaflet';
 import { leafletLayer } from 'protomaps-leaflet';
+import { PMTiles } from 'pmtiles';
 
 import { StaticCoordinateFallback } from '@/components/map/StaticCoordinateFallback';
 import {
@@ -41,10 +42,13 @@ function PmtilesBasemapLayer({
   attribution: string;
 }) {
   const map = useMap();
+  const pmtilesRef = useRef<PMTiles | null>(null);
 
   useEffect(() => {
+    const pmtiles = new PMTiles(blobUrl);
+    pmtilesRef.current = pmtiles;
     const layer = leafletLayer({
-      url: blobUrl,
+      url: pmtiles,
       attribution,
       flavor: 'light',
       lang: 'es',
@@ -75,6 +79,7 @@ export const LocationPreviewMap = ({ gps, className = '' }: Props) => {
   );
   const [packReady, setPackReady] = useState(false);
   const objectUrlRef = useRef<string | null>(null);
+  const loadingRef = useRef(false);
 
   const center = useMemo(
     () => [gps.latitud, gps.longitud] as [number, number],
@@ -91,24 +96,32 @@ export const LocationPreviewMap = ({ gps, className = '' }: Props) => {
   };
 
   const loadPack = async () => {
-    const ready = await isCensOfflineMapPackReady();
-    setPackReady(ready);
-    if (!ready) {
+    if (loadingRef.current) {
+      return;
+    }
+    loadingRef.current = true;
+    try {
+      const ready = await isCensOfflineMapPackReady();
+      setPackReady(ready);
+      if (!ready) {
+        revokeObjectUrl();
+        setBlobUrl(null);
+        return;
+      }
+      const resolved = await resolveCensOfflineMapPackBlobUrl();
+      if (!resolved) {
+        setPackReady(false);
+        setBlobUrl(null);
+        return;
+      }
       revokeObjectUrl();
-      setBlobUrl(null);
-      return;
+      objectUrlRef.current = resolved.blobUrl;
+      setBlobUrl(resolved.blobUrl);
+      setAttribution(resolved.attribution);
+      setPackReady(true);
+    } finally {
+      loadingRef.current = false;
     }
-    const resolved = await resolveCensOfflineMapPackBlobUrl();
-    if (!resolved) {
-      setPackReady(false);
-      setBlobUrl(null);
-      return;
-    }
-    revokeObjectUrl();
-    objectUrlRef.current = resolved.blobUrl;
-    setBlobUrl(resolved.blobUrl);
-    setAttribution(resolved.attribution);
-    setPackReady(true);
   };
 
   useEffect(() => {
